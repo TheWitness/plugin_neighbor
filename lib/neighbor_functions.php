@@ -859,7 +859,7 @@ function neighbor_build_vrf_object_rule_item_filter($rule_id, $prefix = '') {
 		
 		$object_rule_items = db_fetch_assoc_prepared("SELECT * from plugin_neighbor__vrf_rule_items where rule_id=?",array($rule_id));
 	
-		if (sizeof($object_rule_items)) {
+		if (count((array) $object_rule_items)) {
 			$sql_filter = ' ';
 	
 			foreach($object_rule_items as $object_rule_item) {
@@ -910,7 +910,7 @@ function neighbor_build_vrf_matching_objects_filter($rule_id, $rule_type) {
 
 	#print '<pre>Items: $sql<br>'; print_r($rule_items); print '</pre>';
 
-	if (sizeof($rule_items)) {
+	if (count((array) $rule_items)) {
 		$sql_filter	= neighbor_build_vrf_rule_item_filter($rule_items);
 	} else {
 		/* force empty result set if no host matching rule item present */
@@ -929,7 +929,7 @@ function neighbor_build_vrf_rule_item_filter($automation_rule_items, $prefix = '
 	cacti_log(__FUNCTION__ . ' called: ' . serialize($automation_rule_items) . ", prefix: $prefix", false, 'NEIGHBOR TRACE', POLLER_VERBOSITY_HIGH);
 
 	$sql_filter = '';
-	if (sizeof($automation_rule_items)) {
+	if (count((array) $automation_rule_items)) {
 		$sql_filter = ' ';
 
 		foreach($automation_rule_items as $automation_rule_item) {

@@ -817,7 +817,7 @@ function neighbor_vrf_rules() {
 
 	html_header_sort_checkbox($display_text, get_request_var('sort_column'), get_request_var('sort_direction'), false);
 
-	if (sizeof($neighbor_rules)) {
+	if (count((array) $neighbor_rules)) {
 		foreach ($neighbor_rules as $rule) {
 
 			form_alternate_row('line' . $rule['id'], true);
@@ -834,7 +834,7 @@ function neighbor_vrf_rules() {
 
 	html_end_box(false);
 
-	if (count($neighbor_rules)) { print $nav; }
+	if (count((array) $neighbor_rules)) { print $nav; }
 
 	/* draw the dropdown containing a list of available actions for this form */
 	draw_actions_dropdown($neighbor_rules_actions);
@@ -954,8 +954,8 @@ function get_neighbor_vrf_rules_filter() {
 function get_vrf_list($output = 'array') {
 	
 	$vrf = array( 'global' => 'Global Table (no VRF)');
-    $result = db_fetch_assoc_prepared("SELECT DISTINCT vrf FROM plugin_neighbor__ipv4_cache ORDER BY vrf ASC", []);
-	foreach ($result as $row) {
+	$result = db_fetch_assoc_prepared("SELECT DISTINCT vrf FROM plugin_neighbor__ipv4_cache ORDER BY vrf ASC", array());
+	foreach ((array) $result as $row) {
 		if ($row['vrf']) {
 			$vrf[$row['vrf']] = $row['vrf'];
 		}
@@ -990,7 +990,7 @@ function neighbor_display_vrf_match_rule_items($title, $rule_id, $rule_type, $mo
 	html_header($display_text, 2);
 
 	$i = 0;
-	if (sizeof($items)) {
+	if (count((array) $items)) {
 		foreach ($items as $item) {
 			$operation = ($item['operation'] != 0) ? $automation_oper[$item['operation']] : '&nbsp;';
 
@@ -1004,7 +1004,7 @@ function neighbor_display_vrf_match_rule_items($title, $rule_id, $rule_type, $mo
 
 			$form_data .= '<td class="right nowrap">';
 
-			if ($i != sizeof($items)-1) {
+			if ($i != count((array) $items)-1) {
 				$form_data .= '<a class="pic fa fa-caret-down moveArrow" href="' . htmlspecialchars($module . '?action=item_movedown&item_id=' . $item['id'] . '&id=' . $rule_id . '&rule_type=' . $rule_type) . '" title="' . __esc('Move Down') . '"></a>';
 			} else {
 				$form_data .= '<span class="moveArrowNone"></span>';
@@ -1051,7 +1051,7 @@ function neighbor_display_vrf_rule_items($title, $rule_id, $rule_type, $module) 
 	html_header($display_text, 2);
 
 	$i = 0;
-	if (sizeof($items)) {
+	if (count((array) $items)) {
 		foreach ($items as $item) {
 			$operation = ($item['operation'] != 0) ? $automation_oper[$item['operation']] : '&nbsp;';
 
@@ -1065,7 +1065,7 @@ function neighbor_display_vrf_rule_items($title, $rule_id, $rule_type, $module) 
 
 			$form_data .= '<td class="right nowrap">';
 
-			if ($i != sizeof($items)-1) {
+			if ($i != count((array) $items)-1) {
 				$form_data .= '<a class="pic fa fa-awwow-down moveArrow" href="' . htmlspecialchars($module . '?action=item_movedown&item_id=' . $item['id'] . '&id=' . $rule_id .	'&rule_type=' . $rule_type) . '" title="' . __esc('Move Down') . '"></a>';
 			} else {
 				$form_data .= '<span class="moveArrowNone"></span>';
@@ -1454,7 +1454,7 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 
 	/* now we build up a new query for counting the rows */
 	$rows_query = $sql_query . $sql_where . $sql_filter;
-	$total_rows = sizeof(db_fetch_assoc($rows_query, false));
+	$total_rows = count((array) db_fetch_assoc($rows_query, false));
 
 	$sortby = get_request_var('sort_column');
 	if ($sortby=='hostname') {
@@ -1705,7 +1705,7 @@ function neighbor_display_vrf_object_matches($rule, $url) {
 		html_header_sort($display_text,$sort_column,$sort_direction,'',$config['url_path']."plugins/neighbor/neighbor_rules.php?action=edit&id=$rule_id");
 		//html_header($display_text);
 
-		if (!sizeof($neighbor_objects)) {
+		if (!count((array) $neighbor_objects)) {
 			print "<tr colspan='6'><td>" . __('There are no Objects that match this rule.') . "</td></tr>\n";
 		}
 		else {

@@ -94,7 +94,7 @@ function neighbor_check_upgrade () {
 	include_once($config['library_path'] . '/functions.php');
 
 	// Let's only run this check if we are on a page that actually needs the data
-	$files = array('plugins.php', 'neighbor.php');
+	$files = array('plugins.php', 'neighbor.php', 'neighbor_rules.php', 'neighbor_graph_rules.php', 'neighbor_tree_rules.php', 'neighbor_vrf_rules.php');
 	if (!in_array(get_current_page(), $files)) {
 		return;
 	}
@@ -111,6 +111,9 @@ function neighbor_check_upgrade () {
 	$has_poller_delta_table = db_fetch_cell("SHOW TABLES LIKE 'plugin_neighbor__poller_delta'");
 	$has_processes_table = db_fetch_cell("SHOW TABLES LIKE 'plugin_neighbor__processes'");
 	$has_log_table = db_fetch_cell("SHOW TABLES LIKE 'plugin_neighbor__log'");
+	$has_vrf_rules_table = db_fetch_cell("SHOW TABLES LIKE 'plugin_neighbor__vrf_rules'");
+	$has_vrf_rule_items_table = db_fetch_cell("SHOW TABLES LIKE 'plugin_neighbor__vrf_rule_items'");
+	$has_vrf_match_rule_items_table = db_fetch_cell("SHOW TABLES LIKE 'plugin_neighbor__vrf_match_rule_items'");
 	$has_neighbor_type = false;
 	$has_neighbor_options = false;
 
@@ -119,7 +122,7 @@ function neighbor_check_upgrade () {
 		$has_neighbor_options = db_fetch_cell("SHOW COLUMNS FROM plugin_neighbor__rules LIKE 'neighbor_options'");
 	}
 
-	if (!$has_xdp_table || !$has_rules_table || !$has_user_map_table || !$has_edge_table || !$has_poller_output_table || !$has_poller_delta_table || !$has_processes_table || !$has_log_table || !$has_neighbor_type || !$has_neighbor_options) {
+	if (!$has_xdp_table || !$has_rules_table || !$has_user_map_table || !$has_edge_table || !$has_poller_output_table || !$has_poller_delta_table || !$has_processes_table || !$has_log_table || !$has_vrf_rules_table || !$has_vrf_rule_items_table || !$has_vrf_match_rule_items_table || !$has_neighbor_type || !$has_neighbor_options) {
 		include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_sql_tables.php');
 		neighbor_setup_table();
 	}

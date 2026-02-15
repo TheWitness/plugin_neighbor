@@ -254,6 +254,46 @@ function neighbor_setup_table () {
             `enabled` char(2) DEFAULT ''
             )  COMMENT='Automation Graph Rules';
       ");
+
+      // Table: plugin_neighbor__vrf_rules
+
+        db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor__vrf_rules` (
+            `id` mediumint(8) UNSIGNED NOT NULL,
+            `name` varchar(255) NOT NULL DEFAULT '',
+            `description` varchar(64) DEFAULT NULL,
+            `neighbor_type` varchar(32) NOT NULL DEFAULT 'interface',
+            `neighbor_options` varchar(255) DEFAULT '',
+            `vrf` varchar(64) NOT NULL DEFAULT '',
+            `enabled` char(2) DEFAULT ''
+            )  COMMENT='Automation VRF Rules';
+      ");
+
+      // Table: plugin_neighbor__vrf_rule_items
+
+        db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor__vrf_rule_items` (
+            `id` mediumint(8) UNSIGNED NOT NULL,
+            `rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
+            `sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
+            `operation` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
+            `field` varchar(255) NOT NULL DEFAULT '',
+            `operator` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
+            `pattern` varchar(255) NOT NULL DEFAULT ''
+            )  COMMENT='Automation VRF Rule Items';
+      ");
+
+      // Table: plugin_neighbor__vrf_match_rule_items
+
+        db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor__vrf_match_rule_items` (
+            `id` mediumint(8) UNSIGNED NOT NULL,
+            `rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
+            `rule_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
+            `sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
+            `operation` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
+            `field` varchar(255) NOT NULL DEFAULT '',
+            `operator` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
+            `pattern` varchar(255) NOT NULL DEFAULT ''
+            )  COMMENT='Automation VRF Match Rule Items';
+      ");
 	
 	// Table: plugin_neighbor__tree_rules
 	
