@@ -236,6 +236,18 @@ function debug($message) {
 	}
 }
 
+function neighbor_host_discovery_enabled($host_row, $field) {
+	if (!is_array($host_row)) {
+		return false;
+	}
+
+	if (!array_key_exists($field, $host_row)) {
+		return true;
+	}
+
+	return !empty($host_row[$field]);
+}
+
 function discoverHost($hostId) {
 
 	print "discoverHost runnning with host_id=$hostId";
@@ -249,16 +261,16 @@ function discoverHost($hostId) {
 		debug("Adding process tracking for Key:$key\n");
 		db_execute_prepared('REPLACE INTO plugin_neighbor__processes (pid, taskid, host_id) VALUES (?,?,?)',array($key,0,$hostId));
 		debug("Checking for CDP...");	
-		if (read_config_option('neighbor_global_discover_cdp') && (isset($hostRec[0]['neighbor_discover_cdp']) && $hostRec[0]['neighbor_discover_cdp'])) {
+		if (read_config_option('neighbor_global_discover_cdp') && neighbor_host_discovery_enabled($hostRec[0], 'neighbor_discover_cdp')) {
 		    debug("Discovering CDP neighbors.");
 		    $cdpNeighbors = discoverCdpNeighbors($hostRec[0]);
 		}
 		debug("Checking for LLDP...");	
-		if (read_config_option('neighbor_global_discover_lldp') && (isset($hostRec[0]['neighbor_discover_lldp']) && $hostRec[0]['neighbor_discover_lldp'])) {
+		if (read_config_option('neighbor_global_discover_lldp') && neighbor_host_discovery_enabled($hostRec[0], 'neighbor_discover_lldp')) {
 		    debug("Discovering LLDP neighbors.");
 		    $lldpNeighbors = discoverLldpNeighbors($hostRec[0]);
 		}
-		if (read_config_option('neighbor_global_discover_ip') && (isset($hostRec[0]['neighbor_discover_ip']) && $hostRec[0]['neighbor_discover_ip'])) {
+		if (read_config_option('neighbor_global_discover_ip') && neighbor_host_discovery_enabled($hostRec[0], 'neighbor_discover_ip')) {
 		    $lldpNeighbors = discoverIpNeighbors($hostRec[0]);
 		}
 		
@@ -317,7 +329,13 @@ function discoverCdpNeighbors($host) {
                 }
 		elseif (preg_match('/'.$oidTable['cdpCacheDuplex'].'\.(\d+\.\d+)/',$oid,$matches)) {
                                 $index = isset($matches[1]) ? $matches[1] : '';
-				$duplex = ($val == 1) ? 'unknown' : ($val == 2) ? 'half' : 'full';
+				if ($val == 1) {
+					$duplex = 'unknown';
+				} elseif ($val == 2) {
+					$duplex = 'half';
+				} else {
+					$duplex = 'full';
+				}
                                 $cdpParsed[$index]['duplex'] = $duplex;
                 }
 		elseif (preg_match('/'.$oidTable['cdpCacheUptime'].'\.(\d+\.\d+)/',$oid,$matches)) {

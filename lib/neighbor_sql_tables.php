@@ -59,10 +59,56 @@ function neighbor_setup_table () {
     db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_processes` (
                 `pid` int(10) unsigned NOT NULL,
                 `taskid` int(10) unsigned NOT NULL,
+                                                `host_id` int(10) unsigned NOT NULL DEFAULT '0',
                 `started` timestamp NOT NULL default CURRENT_TIMESTAMP,
                 PRIMARY KEY  (`pid`))
                 ENGINE=MEMORY
                 COMMENT='Running collector processes';");
+
+            // Table: plugin_neighbor__edge
+            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor__edge` (
+                                                `id` int(11) NOT NULL AUTO_INCREMENT,
+                                                `rule_id` int(11) NOT NULL,
+                                                `from_id` int(11) NOT NULL,
+                                                `to_id` int(11) NOT NULL,
+                                                `rrd_file` varchar(255) NOT NULL,
+                                                `edge_json` mediumtext,
+                                                `edge_updated` datetime NOT NULL,
+                                                PRIMARY KEY (`id`),
+                                                UNIQUE KEY `rule_from_to_rrd` (`rule_id`,`from_id`,`to_id`,`rrd_file`),
+                                                KEY `rule_id` (`rule_id`),
+                                                KEY `rrd_file` (`rrd_file`),
+                                                KEY `edge_updated` (`edge_updated`)
+                                          ) DEFAULT CHARSET=utf8mb4
+            ");
+
+            // Table: plugin_neighbor__poller_output
+            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor__poller_output` (
+                                                `id` int(11) NOT NULL AUTO_INCREMENT,
+                                                `rrd_file` varchar(255) NOT NULL,
+                                                `timestamp` int(11) NOT NULL,
+                                                `key_name` varchar(64) NOT NULL,
+                                                `value` double DEFAULT NULL,
+                                                `last_updated` datetime NOT NULL,
+                                                PRIMARY KEY (`id`),
+                                                UNIQUE KEY `rrd_ts_key` (`rrd_file`,`timestamp`,`key_name`),
+                                                KEY `timestamp` (`timestamp`)
+                                          ) DEFAULT CHARSET=utf8mb4
+            ");
+
+            // Table: plugin_neighbor__poller_delta
+            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor__poller_delta` (
+                                                `id` int(11) NOT NULL AUTO_INCREMENT,
+                                                `rrd_file` varchar(255) NOT NULL,
+                                                `timestamp` int(11) NOT NULL,
+                                                `timestamp_cycle` int(11) NOT NULL,
+                                                `key_name` varchar(64) NOT NULL,
+                                                `delta` double DEFAULT NULL,
+                                                PRIMARY KEY (`id`),
+                                                UNIQUE KEY `rrd_cycle_key` (`rrd_file`,`timestamp_cycle`,`key_name`),
+                                                KEY `timestamp` (`timestamp`)
+                                          ) DEFAULT CHARSET=utf8mb4
+            ");
 
             // Table: plugin_neighbor__user_map
             db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor__user_map` (
@@ -219,7 +265,10 @@ function neighbor_setup_table () {
       api_plugin_db_add_column('neighbor', 'plugin_neighbor__rules', array('name' => 'neighbor_type', 'type' => 'varchar(32)', 'NULL' => false, 'default' => 'interface', 'after' => 'description'));
       api_plugin_db_add_column('neighbor', 'plugin_neighbor__rules', array('name' => 'neighbor_options', 'type' => 'varchar(255)', 'NULL' => true, 'default' => '', 'after' => 'neighbor_type'));
 
-      add_fields_host();
+      /*
+       * Older Cacti installs can have host table row-size limits; avoid hard-failing
+       * plugin install/upgrade by not auto-altering host with many additional columns.
+       */
 
 }
 
