@@ -276,7 +276,7 @@ function discoverHost($hostId) {
 		
 		//$statsJson = json_encode($stats);
 		/* remove the process lock */
-		db_execute('DELETE FROM plugin_neighbor__processes WHERE pid=' .$key);
+		db_execute_prepared('DELETE FROM plugin_neighbor__processes WHERE pid=?', array($key));
 		//db_execute('INSERT INTO plugin__neighbor__stats ()');
 		db_execute("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_last_run', '" . time() . "')");
 		return true;
@@ -340,7 +340,7 @@ function discoverCdpNeighbors($host) {
                 }
 		elseif (preg_match('/'.$oidTable['cdpCacheUptime'].'\.(\d+\.\d+)/',$oid,$matches)) {
                                 $index = isset($matches[1]) ? $matches[1] : '';
-				$uptime = intval($val/1000);
+				$uptime = is_numeric($val) ? intval($val/1000) : 0;
                                 $cdpParsed[$index]['uptime'] = $uptime;
                 }
 	}
@@ -636,9 +636,9 @@ function discoverIpNeighbors($host) {
 		if ($ipSubnet == '255.255.255.255') { continue;} 					// No loopbacks
 		
 		db_execute_prepared("REPLACE  INTO `plugin_neighbor__ipv4_cache` 
-								(`host_id`, `hostname`,`snmp_id`,`ip_address`,`ip_netmask`,`ip_address_num`, `ip_subnet_num`,`vrf`,`last_seen`)
-								VALUES (?,?,?,?,?,?,?,?,NOW())",
-								array($myHostId, $myHostname,$snmpId, $ipAddress, $ipSubnet, ip2long($ipAddress), ip2long($ipSubnet), $vrf)
+								(`host_id`, `hostname`,`snmp_id`,`ip_address`,`ip_netmask`,`vrf`,`last_seen`)
+								VALUES (?,?,?,?,?,?,NOW())",
+								array($myHostId, $myHostname,$snmpId, $ipAddress, $ipSubnet, $vrf)
 		);
 		
 		// Clean out older entries
