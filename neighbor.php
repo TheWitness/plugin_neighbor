@@ -30,18 +30,6 @@ chdir('../../');
 include_once('./include/auth.php');
 include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_functions.php');
 
-/*
-include_once($config['base_path'] . '/plugins/neighbor/neighbor_functions.php');
-include_once($config['base_path'] . '/plugins/neighbor/setup.php');
-include_once($config['base_path'] . '/plugins/neighbor/includes/database.php');
-include($config['base_path'] . '/plugins/neighbor/includes/arrays.php');
-
-neighbor_initialize_rusage();
-
-plugin_neighbor_upgrade();
-
-delete_old_thresholds();
-*/
 
 set_default_action('summary');
 
