@@ -28,6 +28,10 @@ include_once('include/auth.php');
 include_once('include/global.php');
 include_once('plugins/neighbor/lib/neighbor_functions.php');
 
+/* ================= input validation ================= */
+get_filter_request_var('action', FILTER_CALLBACK, array('options' => 'sanitize_search_string'));
+/* ================= input validation ================= */
+
 switch (get_request_var('action')) {
 	case 'ajax_interface_map':
 		header('Content-Type: application/json');
@@ -60,7 +64,12 @@ switch (get_request_var('action')) {
 function ajax_map_list($format = 'jsonp',$ajax = true) {
 	
 	$format = $format ? $format  : (isset_request_var('format') ? get_request_var('format') : '');
-	$query_callback = get_request_var('callback', 'Callback');
+	/* ================= input validation ================= */
+	$query_callback = 'Callback';
+	if (isset_request_var('callback')) {
+		$query_callback = get_filter_request_var('callback', FILTER_CALLBACK, array('options' => 'sanitize_search_string'));
+	}
+	/* ================= input validation ================= */
 	$results = db_fetch_assoc('SELECT * FROM plugin_neighbor_rules order by name');
 	$json = json_encode($results);
 	$jsonp = sprintf("%s({\"Response\":[%s]})", $query_callback,json_encode($results,JSON_PRETTY_PRINT));
@@ -78,7 +87,12 @@ function ajax_map_list($format = 'jsonp',$ajax = true) {
 function ajax_map_reset_options($format = 'jsonp',$ajax = true) {
 	
 	$format = $format ? $format  : (isset_request_var('format') ? get_request_var('format') : '');
-	$query_callback = get_request_var('callback', 'Callback');
+	/* ================= input validation ================= */
+	$query_callback = 'Callback';
+	if (isset_request_var('callback')) {
+		$query_callback = get_filter_request_var('callback', FILTER_CALLBACK, array('options' => 'sanitize_search_string'));
+	}
+	/* ================= input validation ================= */
 	
 	$user_id = isset_request_var('user_id') ? get_request_var('user_id') : false;
 	$rule_id = isset_request_var('rule_id') ? get_request_var('rule_id') : false;
@@ -108,7 +122,12 @@ function ajax_map_reset_options($format = 'jsonp',$ajax = true) {
 function ajax_map_save_options($format = 'jsonp',$ajax = true) {
 	
 	$format = $format ? $format  : (isset_request_var('format') ? get_request_var('format') : '');
-	$query_callback = get_request_var('callback', 'Callback');
+	/* ================= input validation ================= */
+	$query_callback = 'Callback';
+	if (isset_request_var('callback')) {
+		$query_callback = get_filter_request_var('callback', FILTER_CALLBACK, array('options' => 'sanitize_search_string'));
+	}
+	/* ================= input validation ================= */
 	
 	$user_id = isset_request_var('user_id') ? get_request_var('user_id') : false;
 	$rule_id = isset_request_var('rule_id') ? get_request_var('rule_id') : false;
@@ -183,7 +202,14 @@ function ajax_neighbors_fetch($table = '', $format = 'jsonp',$ajax = true) {
 	}
 	
 	$format = $format ? $format  : (isset_request_var('format') ? get_request_var('format') : '');
-	$query_callback = get_request_var('callback', 'Callback');
+	
+	/* ================= input validation ================= */
+	$query_callback = 'Callback';
+	if (isset_request_var('callback')) {
+		$query_callback = get_filter_request_var('callback', FILTER_CALLBACK, array('options' => 'sanitize_search_string'));
+	}
+	/* ================= input validation ================= */
+	
 	$results = db_fetch_assoc('SELECT * FROM plugin_neighbor_'.$table);
 	$json = json_encode($results);
 	$jsonp = sprintf("%s({\"Response\":[%s]})", $query_callback,json_encode($results,JSON_PRETTY_PRINT));
