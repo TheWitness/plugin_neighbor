@@ -185,6 +185,9 @@ function neighbor_global_item_edit($rule_id, $rule_item_id, $rule_type) {
 
 		$_fields_rule_item_edit = $fields_neighbor_graph_rule_item_edit;
 		$fields = array();
+		$neighbor_options = isset($neighbor_rule['neighbor_options']) ? explode(',', $neighbor_rule['neighbor_options']) : array();
+		$neighbor_options = array_filter(array_map('trim', $neighbor_options));
+		
 		foreach ($neighbor_options as $opt) {
 				$cols = db_get_table_column_types("plugin_neighbor_".$opt);
 				foreach ($cols as $col => $rec) {
@@ -193,24 +196,6 @@ function neighbor_global_item_edit($rule_id, $rule_item_id, $rule_type) {
 				}
 		}
 		$_fields_rule_item_edit['field']['array'] = $fields;
-		//sort($_fields_rule_item_edit['field']['array']);
-		/*		
-		
-		$_fields_rule_item_edit = $fields_neighbor_graph_rule_item_edit;
-		$fields = array();
-		$xml_array = get_data_query_array($neighbor_rule['snmp_query_id']);
-
-		if (sizeof($xml_array['fields'])) {
-			foreach($xml_array['fields'] as $key => $value) {
-				# ... work on all input fields
-				if (isset($value['direction']) && ($value['direction'] == 'input' || $value['direction'] == 'input-output')) {
-					$fields[$key] = $key . ' - ' . $value['name'];
-				}
-			}
-			$_fields_rule_item_edit['field']['array'] = $fields;
-		}
-		*/
-		
 		$module = 'neighbor_graph_rules.php';
 
 		break;
