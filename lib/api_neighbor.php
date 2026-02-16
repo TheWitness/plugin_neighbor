@@ -1464,7 +1464,6 @@ function neighbor_build_data_query_sql($rule,$host_filter,$edge_filter) {
 			continue;
 		}
 		foreach ($cols as $col => $rec) {
-			//if (preg_match("/^id$|_id|last_seen|_changed/",$col)) { continue;}
 			$sql_query .= ", $opt.$col";
 		}
 	}
