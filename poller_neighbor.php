@@ -48,6 +48,7 @@ include_once('lib/poller.php');
 include_once('lib/data_query.php');
 include_once('plugins/neighbor/lib/neighbor_functions.php');
 include_once('plugins/neighbor/lib/neighbor_sql_tables.php');
+include_once('plugins/neighbor/lib/polling.php');
 
 if (function_exists('pcntl_signal')) {
 	pcntl_signal(SIGINT, "sigHandler");

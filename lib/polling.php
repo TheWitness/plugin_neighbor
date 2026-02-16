@@ -22,6 +22,8 @@
  +-------------------------------------------------------------------------+
 */
 
+include_once(dirname(__FILE__) . '/neighbor_functions.php');
+
 /**
  * Get the edge RRA
  *
@@ -140,48 +142,6 @@ function process_poller_deltas() {
 	db_execute_prepared("DELETE FROM plugin_neighbor_poller_delta where timestamp < ?", array(time() - 900));
 }
 
-
-/**
- * Fetch a hash from a DB result
- *
- * @param array $result The DB result
- * @param array $index_keys The index keys
- * @return array The hash
- */
-function db_fetch_hash(& $result,$index_keys) {
-	/* The array we're going to be returning */
-	$assoc = array(); 
-	
-	foreach ($result as $row) {
-		/* Start the pointer off at the base of the array */
-		$pointer = & $assoc;
-		
-		for ($i=0; $i<count($index_keys); $i++) {
-			$key_name = $index_keys[$i];
-			if (!array_key_exists($key_name,$row)) {
-				error_log("Error: Key [$key_name] is not present in the results output\n");
-				return(false);
-			}
-
-			$key_val= isset($row[$key_name]) ? $row[$key_name]  : "";
-			
-			if (!isset($pointer[$key_val])) {
-				/* Start a new node */
-				$pointer[$key_val] = "";
-				
-				/* Move the pointer on to the new node */
-				$pointer = & $pointer[$key_val];
-			}
-			else {
-				/* Already exists, move the pointer on to the new node */
-				$pointer = & $pointer[$key_val];
-			}
-		}
-
-		foreach ($row as $key => $val) { $pointer[$key] = $val; }
-	}
-	return($assoc);
-}
 
 /**
  * Get the SNMP OID table for neighbor discovery protocols
