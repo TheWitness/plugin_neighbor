@@ -222,115 +222,140 @@ function neighbor_setup_table () {
     	//Table: plugin_neighbor_graph_rules
     
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_graph_rules` (
-		`id` mediumint(8) UNSIGNED NOT NULL,
+		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`name` varchar(255) NOT NULL DEFAULT '',
 		`snmp_query_id` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`graph_type_id` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
-		`enabled` char(2) DEFAULT ''
+		`enabled` char(2) DEFAULT '',
+		PRIMARY KEY (`id`),
+		KEY `snmp_query_id` (`snmp_query_id`),
+		KEY `enabled` (`enabled`)
 	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Graph Rules';
 	");
     
-      //Table: plugin_neighbor_graph_rules
+      //Table: plugin_neighbor_graph_rule_items
 
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_graph_rule_items` (
-		`id` mediumint(8) UNSIGNED NOT NULL,
+		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
 		`sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`operation` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`field` varchar(255) NOT NULL DEFAULT '',
 		`operator` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
-		`pattern` varchar(255) NOT NULL DEFAULT ''
-	      )  COMMENT='Automation Graph Rule Items';
+		`pattern` varchar(255) NOT NULL DEFAULT '',
+		PRIMARY KEY (`id`),
+		KEY `rule_id` (`rule_id`)
+	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Graph Rule Items';
 	");
     
       // Table: plugin_neighbor_match_rule_items
 	
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_match_rule_items` (
-		`id` mediumint(8) UNSIGNED NOT NULL,
+		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
 		`rule_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`operation` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`field` varchar(255) NOT NULL DEFAULT '',
 		`operator` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
-		`pattern` varchar(255) NOT NULL DEFAULT ''
-	      )  COMMENT='Automation Match Rule Items';
+		`pattern` varchar(255) NOT NULL DEFAULT '',
+		PRIMARY KEY (`id`),
+		KEY `rule_id` (`rule_id`),
+		KEY `rule_type` (`rule_type`)
+	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Match Rule Items';
 	");
 	
       // Table: plugin_neighbor_rules
 	
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_rules` (
-		`id` mediumint(8) UNSIGNED NOT NULL,
+		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`name` varchar(255) NOT NULL DEFAULT '',
             `description` varchar(64) DEFAULT NULL,
             `neighbor_type` varchar(64) NOT NULL DEFAULT 'interface',
             `neighbor_options` varchar(255) DEFAULT '',
-		`enabled` char(2) DEFAULT ''
-	      )  COMMENT='Automation Graph Rules';
+		`enabled` char(2) DEFAULT '',
+		PRIMARY KEY (`id`),
+		KEY `enabled` (`enabled`),
+		KEY `neighbor_type` (`neighbor_type`)
+	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Neighbor Automation Rules';
 	");
 
       // Table: plugin_neighbor_vrf_rules
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_rules` (
-            `id` mediumint(8) UNSIGNED NOT NULL,
+            `id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
             `name` varchar(255) NOT NULL DEFAULT '',
             `description` varchar(64) DEFAULT NULL,
             `neighbor_type` varchar(64) NOT NULL DEFAULT 'interface',
             `neighbor_options` varchar(255) DEFAULT '',
             `vrf` varchar(64) NOT NULL DEFAULT '',
-            `enabled` char(2) DEFAULT ''
-            )  COMMENT='Automation VRF Rules';
+            `enabled` char(2) DEFAULT '',
+            PRIMARY KEY (`id`),
+            KEY `enabled` (`enabled`),
+            KEY `vrf` (`vrf`),
+            KEY `neighbor_type` (`neighbor_type`)
+            ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation VRF Rules';
       ");
 
       // Table: plugin_neighbor_vrf_rule_items
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_rule_items` (
-            `id` mediumint(8) UNSIGNED NOT NULL,
+            `id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
             `rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
             `sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
             `operation` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
             `field` varchar(255) NOT NULL DEFAULT '',
             `operator` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
-            `pattern` varchar(255) NOT NULL DEFAULT ''
-            )  COMMENT='Automation VRF Rule Items';
+            `pattern` varchar(255) NOT NULL DEFAULT '',
+            PRIMARY KEY (`id`),
+            KEY `rule_id` (`rule_id`)
+            ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation VRF Rule Items';
       ");
 
       // Table: plugin_neighbor_vrf_match_rule_items
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_match_rule_items` (
-            `id` mediumint(8) UNSIGNED NOT NULL,
+            `id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
             `rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
             `rule_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
             `sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
             `operation` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
             `field` varchar(255) NOT NULL DEFAULT '',
             `operator` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
-            `pattern` varchar(255) NOT NULL DEFAULT ''
-            )  COMMENT='Automation VRF Match Rule Items';
+            `pattern` varchar(255) NOT NULL DEFAULT '',
+            PRIMARY KEY (`id`),
+            KEY `rule_id` (`rule_id`),
+            KEY `rule_type` (`rule_type`)
+            ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation VRF Match Rule Items';
       ");
 	
       // Table: plugin_neighbor_tree_rules
 	
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_tree_rules` (
-		`id` mediumint(8) UNSIGNED NOT NULL,
+		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`name` varchar(255) NOT NULL DEFAULT '',
 		`tree_id` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`tree_item_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
 		`leaf_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`host_grouping_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
-		`enabled` char(2) DEFAULT ''
-	      )  COMMENT='Automation Tree Rules';
+		`enabled` char(2) DEFAULT '',
+		PRIMARY KEY (`id`),
+		KEY `tree_id` (`tree_id`),
+		KEY `enabled` (`enabled`)
+	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Tree Rules';
 	");
 	
       // Table: plugin_neighbor_tree_rule_items
 	
       db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_tree_rule_items` (
-		`id` mediumint(8) UNSIGNED NOT NULL,
+		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
 		`sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`field` varchar(255) NOT NULL DEFAULT '',
 		`sort_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
 		`propagate_changes` char(2) DEFAULT '',
 		`search_pattern` varchar(255) NOT NULL DEFAULT '',
-		`replace_pattern` varchar(255) NOT NULL DEFAULT ''
-	      )  COMMENT='Automation Tree Rule Items';
+		`replace_pattern` varchar(255) NOT NULL DEFAULT '',
+		PRIMARY KEY (`id`),
+		KEY `rule_id` (`rule_id`)
+	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Tree Rule Items';
 	");
 	
 	/*
