@@ -1098,10 +1098,17 @@ function neighbor_build_vrf_data_query_sql($rule,$host_filter = '',$edge_filter=
 
 	/* take matching hosts into account */
 	$rule_id = isset($rule['id']) ? $rule['id'] : '';
-	$sql_where = "(".neighbor_build_vrf_matching_objects_filter($rule_id, AUTOMATION_RULE_TYPE_GRAPH_MATCH).")";
-	$sql_where2 = "(".neighbor_build_vrf_object_rule_item_filter($rule_id).")";
-	$sql_where_combined = array($sql_where,$sql_where2);
+	$sql_where = trim(neighbor_build_vrf_matching_objects_filter($rule_id, AUTOMATION_RULE_TYPE_GRAPH_MATCH));
+	$sql_where2 = trim(neighbor_build_vrf_object_rule_item_filter($rule_id));
+	$sql_where_combined = array();
 	
+	if ($sql_where !== '') {
+		$sql_where_combined[] = "($sql_where)";
+	}
+	
+	if ($sql_where2 !== '') {
+		$sql_where_combined[] = "($sql_where2)";
+	}
 	
 	$table_list = implode(",",$tables);
 	$table_join_list = implode(" ",$table_join);
