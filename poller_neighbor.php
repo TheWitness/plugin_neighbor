@@ -1,39 +1,39 @@
-#!/usr/bin/php
 <?php
 
-declare(ticks = 1);				// Ticks for handling signals
-// ini_set('display_errors', 1);
-// error_reporting(~0);
+require_once('./include/cli_check.php');
+
 
 /*
-+-------------------------------------------------------------------------+
-| Copyright (C) 2004-2017 The Cacti Group                                 |
-|					 				  |
-| This program is free software; you can redistribute it and/or	   	  |
-| modify it under the terms of the GNU General Public License	          |
-| as published by the Free Software Foundation; either version 2	  |
-| of the License, or (at your option) any later version.	          |
-|					                                  |
-| This program is distributed in the hope that it will be useful,	  |
-| but WITHOUT ANY WARRANTY; without even the implied warranty of	  |
-| MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the	          |
-| GNU General Public License for more details.		                  |
-+-------------------------------------------------------------------------+
-| Cacti: The Complete RRDTool-based Graphing Solution	                  |
-+-------------------------------------------------------------------------+
-| This code is designed, written, and maintained by the Cacti Group. See  |
-| about.php and/or the AUTHORS file for specific developer information.   |
-+-------------------------------------------------------------------------+
-| http://www.cacti.net/			                                  |
-+-------------------------------------------------------------------------+
+ +-------------------------------------------------------------------------+
+ | Copyright (C) 2004-2026 The Cacti Group                                 |
+ |                                                                         |
+ | This program is free software; you can redistribute it and/or           |
+ | modify it under the terms of the GNU General Public License             |
+ | as published by the Free Software Foundation; either version 2          |
+ | of the License, or (at your option) any later version.                  |
+ |                                                                         |
+ | This program is distributed in the hope that it will be useful,         |
+ | but WITHOUT ANY WARRANTY; without even the implied warranty of          |
+ | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
+ | GNU General Public License for more details.                            |
+ +-------------------------------------------------------------------------+
+ | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ +-------------------------------------------------------------------------+
+ | This code is designed, written, and maintained by the Cacti Group. See  |
+ | about.php and/or the AUTHORS file for specific developer information.   |
+ +-------------------------------------------------------------------------+
+ | http://www.cacti.net/                                                   |
+ +-------------------------------------------------------------------------+
 */
+
+
+
 if (!isset($_SERVER['argv'][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($_SERVER['REMOTE_ADDR'])) {
         die('<br><strong>This script is only meant to run at the command line.</strong>');
 }
 
 
-/* We are not talking to the browser */
-$no_http_headers = true;
+declare(ticks = 1);
 ini_set('max_execution_time', '0');
 error_log("\n\nRunning poller_neighbor with args:".print_r($_SERVER['argv'],1));
 error_log("DIR: ".dirname(__FILE__));
@@ -72,6 +72,7 @@ if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 	$forceRun   	= FALSE;
 	$forceDiscovery = FALSE;
 	$mainRun	= FALSE;
+	$autoDiscoverAll = FALSE;
 	$hostId		= '';
 	$start	  	= '';
 	$seed	  	= '';
@@ -159,6 +160,10 @@ if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 			case '-M':
 				$mainRun = TRUE;
 				break;
+			case '-A':
+			case '--auto-discover-all':
+				$autoDiscoverAll = TRUE;
+				break;
 		       	case '--verbose':
 				$verbose = TRUE;
 				break;
@@ -186,9 +191,8 @@ if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 	
 	/* Check for mandatory parameters */
 
-	if (!$mainRun && $hostId == '') {
-		echo "Error: You must specify a Cacti host-id with --host-id\n";
-		exit;
+	if (!$mainRun && !$autoDiscoverAll && $hostId == '') {
+		$mainRun = TRUE;  // Default to processing all hosts
 	}
 	
 	/* Do not process if not enabled */
@@ -207,6 +211,10 @@ if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 	if ($mainRun) {
 		print "Processing hosts.\n";
 		processHosts();
+	}
+	elseif ($autoDiscoverAll) {
+		print "Auto-discovering all hosts.\n";
+		autoDiscoverHosts();
 	}
 	else {
 		discoverHost($hostId);
@@ -882,50 +890,57 @@ function getSnmpCache($hostId) {
 
 
 function autoDiscoverHosts() {
-        global $debug,$key;
+	global $debug, $verbose;
 
-        $hosts = db_fetch_assoc("SELECT *
-                FROM host
-                WHERE snmp_version>0
-                AND disabled!='on'
-                AND status!=1");
+	$hosts = db_fetch_assoc("SELECT *
+		FROM host
+		WHERE snmp_version > 0
+		AND disabled != 'on'
+		AND status != 1");
 
-        debug("Starting AutoDiscovery for '" . sizeof($hosts) . "' Hosts");
+	if ($verbose) {
+		echo "INFO: Starting Auto-Discovery for '" . sizeof($hosts) . "' Hosts\n";
+	}
+	debug("Starting AutoDiscovery for '" . sizeof($hosts) . "' Hosts");
 
-        /* set a process lock */
-        db_execute('REPLACE INTO plugin_hmib_processes (pid, taskid) VALUES (' . $key . ', 0)');
+	$hostsAdded = 0;
+	$hostsSkipped = 0;
+	$hostsUpdated = 0;
 
-        if (sizeof($hosts)) {
-        foreach($hosts as $host) {
-                debug("AutoDiscovery Check for Host '" . $host['description'] . '[' . $host['hostname'] . "]'");
-                $hostMib   = plugin_cacti_snmp_walk($host['hostname'], $host['snmp_community'], '.1.3.6.1.2.1.25.1', $host['snmp_version'],
-                        $host['snmp_username'], $host['snmp_password'],
-                        $host['snmp_auth_protocol'], $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'],
-                        $host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'],
-                        read_config_option('snmp_retries'), $host['max_oids'], SNMP_VALUE_LIBRARY, SNMP_WEBUI);
+	if (sizeof($hosts)) {
+		foreach($hosts as $host) {
+			debug("AutoDiscovery Check for Host '" . $host['description'] . '[' . $host['hostname'] . "']" );
+			
+			// Check if host already exists in plugin_neighbor_host
+			$existing = db_fetch_cell_prepared("SELECT host_id FROM plugin_neighbor_host WHERE host_id = ?", array($host['id']));
+			
+			if ($existing) {
+				debug("Host '" . $host['description'] . "' already in neighbor discovery table");
+				// Update existing entry to ensure it's enabled
+				db_execute_prepared("UPDATE plugin_neighbor_host 
+					SET enabled = 1 
+					WHERE host_id = ?", 
+					array($host['id']));
+				$hostsUpdated++;
+			} else {
+				// Add new host with default settings
+				db_execute_prepared("INSERT INTO plugin_neighbor_host 
+					(host_id, enabled, discover_cdp, discover_lldp, discover_ip) 
+					VALUES (?, 1, 1, 1, 1)",
+					array($host['id']));
+				debug("Host '" . $host['description'] . "' added to neighbor discovery table");
+				$hostsAdded++;
+			}
+		}
+	}
 
-                $system   = cacti_snmp_get($host['hostname'], $host['snmp_community'], '.1.3.6.1.2.1.1.1.0', $host['snmp_version'],
-                        $host['snmp_username'], $host['snmp_password'],
-                        $host['snmp_auth_protocol'], $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'],
-                        $host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'],
-                        read_config_option('snmp_retries'), $host['max_oids'], SNMP_VALUE_LIBRARY, SNMP_WEBUI);
+	if ($verbose) {
+		echo "INFO: Auto-Discovery Complete - Added: $hostsAdded, Updated: $hostsUpdated\n";
+	}
+	debug("AutoDiscovery Complete - Added: $hostsAdded, Updated: $hostsUpdated");
+	db_execute_prepared("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_autodiscovery_lastrun', ?)", array(time()));
 
-                if (sizeof($hostMib)) {
-                        $add = true;
-
-                        if ($add) {
-                                debug("Host '" . $host['description'] . '[' . $host['hostname'] . "]' Supports Host MIB Resources");
-                                db_execute('INSERT INTO plugin_hmib_hrSystem (host_id) VALUES (' . $host['id'] . ') ON DUPLICATE KEY UPDATE host_id=VALUES(host_id)');
-                        }
-                }
-        }
-        }
-
-        /* remove the process lock */
-        db_execute('DELETE FROM plugin_hmib_processes WHERE pid=' . getmypid());
-        db_execute("REPLACE INTO settings (name,value) VALUES ('hmib_autodiscovery_lastrun', '" . time() . "')");
-
-        return true;
+	return true;
 }
 
 
@@ -953,15 +968,18 @@ function processHosts() {
 	}
 	
 	/* The hosts to scan will
-	 *  1) Not be disabled,
-	 *  2) Be linked to the host table
+	 *  1) Be configured in plugin_neighbor_host table
+	 *  2) Not be disabled in host table
 	 *  3) Be up and operational
 	 */
-	$hosts = db_fetch_assoc("SELECT id as host_id, host.description, host.hostname FROM host
-				WHERE host.disabled!='on'
-				AND host.status!=1");
+	$hosts = db_fetch_assoc("SELECT pnh.host_id, h.description, h.hostname 
+				FROM plugin_neighbor_host AS pnh
+				INNER JOIN host AS h ON pnh.host_id = h.id
+				WHERE h.disabled != 'on'
+				AND h.status != 1
+				AND pnh.enabled = 1");
 
-	/* Remove entries for disabled hosts */
+	/* Remove entries for disabled or removed hosts */
 	db_execute("DELETE FROM plugin_neighbor_xdp WHERE host_id IN (SELECT id FROM host WHERE disabled='on')");
 
 	// db_execute("DELETE FROM plugin_neighbor_ip WHERE host_id IN (SELECT id FROM host WHERE disabled='on')");
@@ -1062,8 +1080,19 @@ function displayHelp() {
 	// displayVersion();
 	echo "\nNeighbor discovery plugin for Cacti.\n\n";
 	echo "Usage: \n";
-	echo "Master process : poller_neighbor.php [-M] [-f] [-fd] [-d]\n";
-	echo " Child  process: poller_neighbor.php --host-id=N [--seed=N] [-f] [-d]\n\n";
+	echo "Master process      : poller_neighbor.php [-M] [-f] [-fd] [-d]\n";
+	echo "Auto-discover hosts : poller_neighbor.php [-A|--auto-discover-all] [-d]\n";
+	echo "Child process       : poller_neighbor.php --host-id=N [--seed=N] [-f] [-d]\n\n";
+	echo "Options:\n";
+	echo "  -M                    Run main poller for configured hosts\n";
+	echo "  -A, --auto-discover-all  Add all eligible hosts to neighbor discovery\n";
+	echo "  --host-id=N           Poll specific host by ID\n";
+	echo "  -f, --force           Force polling regardless of schedule\n";
+	echo "  -fd, --force-discovery  Force discovery\n";
+	echo "  -d, --debug           Enable debug output\n";
+	echo "  --verbose             Enable verbose output\n";
+	echo "  -v, -V, --version     Display version information\n";
+	echo "  -h, -H, --help        Display this help message\n\n";
 }
 
 function exitCleanly() {
