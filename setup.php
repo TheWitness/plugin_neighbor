@@ -366,7 +366,24 @@ function neighbor_show_tab() {
 // Credits - Sourced and modified from Monitor Plugin Code
 
 function neighbor_config_form () {
-        global $fields_host_edit, $criticalities;
+        global $fields_host_edit, $criticalities, $config;
+		include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_sql_tables.php');
+		
+		// Get host_id from the form if editing an existing host
+		// Use get_nfilter_request_var to avoid validation errors when 'id' is non-numeric (e.g., plugin name)
+		$host_id = 0;
+		if (isset_request_var('id')) {
+			$id_val = get_nfilter_request_var('id');
+			if (is_numeric($id_val)) {
+				$host_id = (int)$id_val;
+			}
+		}
+		
+		// Load settings from plugin_neighbor_host table
+		$neighbor_settings = array();
+		if ($host_id > 0) {
+			$neighbor_settings = neighbor_get_host_settings($host_id);
+		}
 
         $fields_host_edit2 = $fields_host_edit;
         $fields_host_edit3 = array();
@@ -385,7 +402,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('Enable Neighbor Discovery', 'neighbor'),
                                 'description' => __('Enable Neighbor discovery during polling', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_cdp|',
+                                'value' => isset($neighbor_settings['enabled']) ? $neighbor_settings['enabled'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -393,7 +410,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('CDP', 'neighbor'),
                                 'description' => __('Discover Cisco Discovery Protocol neighbors', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_cdp|',
+                                'value' => isset($neighbor_settings['discover_cdp']) ? $neighbor_settings['discover_cdp'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -409,7 +426,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('IP Subnets', 'neighbor'),
                                 'description' => __('Discover neighbors in the same IP subnet ', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_ip|',
+                                'value' => isset($neighbor_settings['discover_ip']) ? $neighbor_settings['discover_ip'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -417,7 +434,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('Switching', 'neighbor'),
                                 'description' => __('Discover neighbors by learned MAC address', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_ip|',
+                                'value' => isset($neighbor_settings['discover_switching']) ? $neighbor_settings['discover_switching'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -425,7 +442,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('Interface Descriptions', 'neighbor'),
                                 'description' => __('Discover neighbors by parsing interface descriptions', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_ifalias|',
+                                'value' => isset($neighbor_settings['discover_ifalias']) ? $neighbor_settings['discover_ifalias'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -433,7 +450,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('OSPF', 'neighbor'),
                                 'description' => __('Discover OSPF neighbors', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_ospf|',
+                                'value' => isset($neighbor_settings['discover_ospf']) ? $neighbor_settings['discover_ospf'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -441,7 +458,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('BGP', 'neighbor'),
                                 'description' => __('Discover BGP neighbors', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_bgp|',
+                                'value' => isset($neighbor_settings['discover_bgp']) ? $neighbor_settings['discover_bgp'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -449,7 +466,7 @@ function neighbor_config_form () {
                                 'method' => 'checkbox',
                                 'friendly_name' => __('IS-IS', 'neighbor'),
                                 'description' => __('Discover IS-IS neighbors', 'neighbor'),
-                                'value' => '|arg1:neighbor_discover_isis|',
+                                'value' => isset($neighbor_settings['discover_isis']) ? $neighbor_settings['discover_isis'] : 'on',
                                 'default' => 'on',
                                 'form_id' => false
                         );
@@ -467,6 +484,7 @@ function neighbor_device_action_array($device_action_array) {
 
 function neighbor_device_action_execute($action) {
         global $config, $fields_host_edit;
+		include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_sql_tables.php');
 
         if ($action != 'neighbor_enable' && $action != 'neighbor_disable' && $action != 'neighbor_settings') {
                 return $action;
@@ -477,20 +495,34 @@ function neighbor_device_action_execute($action) {
         if ($selected_items != false) {
                 if ($action == 'neighbor_enable' || $action == 'neighbor_disable') {
                         for ($i = 0; ($i < count($selected_items)); $i++) {
-                                if ($action == 'neighbor_enable') {
-                                        db_execute("UPDATE host SET neighbor_enable='on' WHERE id='" . $selected_items[$i] . "'");
-                                }else if ($action == 'neighbor_disable') {
-                                        db_execute("UPDATE host SET neighbor_enable='' WHERE id='" . $selected_items[$i] . "'");
-                                }
+						$settings = array('enabled' => ($action == 'neighbor_enable' ? 'on' : ''));
+						neighbor_save_host_settings($selected_items[$i], $settings);
                         }
-                }else{
-                        for ($i = 0; ($i < count($selected_items)); $i++) {
-						foreach ($fields_host_edit as $field_name => $field_array) {
-                                        if (isset_request_var("t_$field_name")) {
-                                              db_execute_prepared("UPDATE host SET $field_name = ? WHERE id = ?", array(get_nfilter_request_var($field_name), $selected_items[$i]));
-                                        }
-                                }
+                } else {
+					// Map old field names to new field names
+					$field_mapping = array(
+						'neighbor_discover_enable'    => 'enabled',
+						'neighbor_discover_cdp'       => 'discover_cdp',
+						'neighbor_discover_lldp'      => 'discover_lldp',
+						'neighbor_discover_ip'        => 'discover_ip',
+						'neighbor_discover_switching' => 'discover_switching',
+						'neighbor_discover_ifalias'   => 'discover_ifalias',
+						'neighbor_discover_ospf'      => 'discover_ospf',
+						'neighbor_discover_bgp'       => 'discover_bgp',
+						'neighbor_discover_isis'      => 'discover_isis',
+					);
+					
+                    for ($i = 0; ($i < count($selected_items)); $i++) {
+						$settings = array();
+						foreach ($field_mapping as $old_field => $new_field) {
+                            if (isset_request_var("t_$old_field")) {
+								$settings[$new_field] = get_nfilter_request_var($old_field);
+                            }
                         }
+						if (count($settings) > 0) {
+							neighbor_save_host_settings($selected_items[$i], $settings);
+						}
+                    }
                 }
         }
 
@@ -563,37 +595,47 @@ function neighbor_device_action_prepare($save) {
 }
 
 function neighbor_api_device_save($save) {
-		 $fields = array(
-                        'neighbor_discover_enable',
-                        'neighbor_discover_cdp',
-                        'neighbor_discover_lldp',
-                        'neighbor_discover_ip',
-                        'neighbor_discover_switching',
-                        'neighbor_discover_ifalias',
-                        'neighbor_discover_ospf',
-                        'neighbor_discover_bgp',
-                        'neighbor_discover_isis',
-        );
-		
-		foreach ($fields as $field) { 
-			if (isset_request_var($field)) {
-					$save[$field] = form_input_validate(get_nfilter_request_var($field), $field, '', true, 3);
-			}
-			else {
-					$save[$field] = form_input_validate('', $field, '', true, 3);
-			}
-		}      
-		error_log("Saving devices...");
-		error_log("Save is:".print_r($save,1));
-
-        return $save;
+	global $config;
+	include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_sql_tables.php');
+	
+	// Map old field names to new field names (without 'neighbor_' prefix)
+	$field_mapping = array(
+		'neighbor_discover_enable'    => 'enabled',
+		'neighbor_discover_cdp'       => 'discover_cdp',
+		'neighbor_discover_lldp'      => 'discover_lldp',
+		'neighbor_discover_ip'        => 'discover_ip',
+		'neighbor_discover_switching' => 'discover_switching',
+		'neighbor_discover_ifalias'   => 'discover_ifalias',
+		'neighbor_discover_ospf'      => 'discover_ospf',
+		'neighbor_discover_bgp'       => 'discover_bgp',
+		'neighbor_discover_isis'      => 'discover_isis',
+	);
+	
+	$settings = array();
+	foreach ($field_mapping as $old_field => $new_field) {
+		if (isset_request_var($old_field)) {
+			$settings[$new_field] = form_input_validate(get_nfilter_request_var($old_field), $old_field, '', true, 3);
+		} else {
+			$settings[$new_field] = form_input_validate('', $old_field, '', true, 3);
+		}
+	}
+	
+	// Save to plugin_neighbor_host table if we have a host_id
+	if (isset($save['id']) && $save['id'] > 0) {
+		neighbor_save_host_settings($save['id'], $settings);
+		error_log("NEIGHBOR: Saved settings for host_id=" . $save['id'] . ": " . print_r($settings, 1));
+	}
+	
+	return $save;
 }
 
 
 
 function neighbor_device_remove($devices) {
-        db_execute('DELETE FROM plugin_neighbor_xdp WHERE host_id IN(' . implode(',', $devices) . ')');
+	db_execute('DELETE FROM plugin_neighbor_xdp WHERE host_id IN(' . implode(',', $devices) . ')');
 	db_execute('DELETE FROM plugin_neighbor_host WHERE host_id IN(' . implode(',', $devices) . ')');
+	return $devices;
+}
 
 
 
