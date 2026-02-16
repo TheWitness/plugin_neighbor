@@ -49,7 +49,7 @@ include_once('lib/data_query.php');
 include_once('plugins/neighbor/lib/neighbor_functions.php');
 include_once('plugins/neighbor/lib/neighbor_sql_tables.php');
 
-if (function_exists('pcntl_signal')) {				// Set up signal handling if available
+if (function_exists('pcntl_signal')) {
 	pcntl_signal(SIGINT, "sigHandler");
 	pcntl_signal(SIGTERM, "sigHandler");
 }

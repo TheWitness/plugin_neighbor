@@ -27,6 +27,14 @@
 
 include_once($config['base_path'] . '/plugins/neighbor/lib/api_neighbor.php');
 
+/**
+ * Include CSS and JavaScript dependencies for neighbor tab interface
+ * 
+ * Loads DevExpress UI components, CLDR for internationalization, and neighbor-specific
+ * JavaScript. Creates a div container for the tabbed interface.
+ * 
+ * @return void Outputs HTML and script tags
+ */
 function neighbor_tabs() {
 	global $config;
 	printf("<link href='%s' rel='stylesheet'>", "js/devexpress/css/dx.common.css");
@@ -35,51 +43,27 @@ function neighbor_tabs() {
 	printf("<script type='text/javascript' src='%s'></script>",'js/devexpress/js/dx.all.js');
 	printf("<script type='text/javascript' src='%s'></script>",'js/neighbor.js');
 	print "<div id='neighbor_tabs'></div>";
-	
-	return;
-	
-	/* present a tabbed interface */
-	$tabs = array(
-		'summary'    => __('Summary', 'neighbor'),
-		'xdp'        => __('xDP Neighbors', 'neighbor'),
-		'ip_subnet'  => __('IP Neighbors', 'neighbor'),
-		'maps'			 => __('Maps','neighbor')
-	);
-
-	get_filter_request_var('tab', FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '/^([a-zA-Z]+)$/')));
-	load_current_session_value('tab', 'sess_neighbor_tab', 'general');
-	$current_tab = get_request_var('action');
-
-	/* draw the tabs */
-	print "<div class='tabs'><nav><ul>\n";
-
-	if (sizeof($tabs)) {
-		foreach (array_keys($tabs) as $tab_short_name) {
-			print "<li><a class='tab" . (($tab_short_name == $current_tab) ? " selected'" : "'") .
-				" href='" . htmlspecialchars($config['url_path'] .
-				'plugins/neighbor/neighbor.php?' .
-				'action=' . $tab_short_name) .
-				"'>" . $tabs[$tab_short_name] . "</a></li>\n";
-		}
-	}
-
-	print "</ul></nav></div>\n";
 }
 
-
-
-// Get the xDP neighbors
-// args:
-//	total_rows = pointer to cacti $total_rows for pagination
-// 	filterField = filter field (default = '')
-// 	filterVal = filter value (default = '')
-// 	orderField = order field (default = '')
-// 	orderDir = order direction (default = 'asc')
-// 	rowStart = start row for pagination (default = 0)
-// 	rowEnd = end row for pagination (default = 25)
-//	output = output format - either array or json (default = array)
-//	cacti = show only hosts known to cacti (default = true)
-
+/**
+ * Retrieve CDP/LLDP neighbor discovery data with filtering and pagination
+ * 
+ * Queries the plugin_neighbor_xdp table for neighbor relationships discovered via
+ * CDP and LLDP protocols. Supports filtering by type, host, and search terms.
+ * 
+ * @param int &$total_rows Reference to store total matching rows for pagination
+ * @param int $rowStart Starting row number (0-based, default 1)
+ * @param int $rowEnd Ending row number (default 25)
+ * @param string $xdpType Filter by protocol: 'cdp', 'lldp', or '' for all
+ * @param string $hostId Filter by host ID (default '')
+ * @param string $filterVal Search filter to match multiple fields (default '')
+ * @param string $orderField Column to sort by (default 'hostname')
+ * @param string $orderDir Sort direction 'asc' or 'desc' (default 'asc')
+ * @param string $cactiOnly If 'on', only show neighbors where both sides are in Cacti (default 'on')
+ * @param string $output Return format: 'array' or 'json' (default 'array')
+ * 
+ * @return array|string Array of neighbor records or JSON string
+ */
 function getXdpNeighbors(&$total_rows = 0, $rowStart = 1, $rowEnd = 25, $xdpType = '', $hostId = '', $filterVal = '', $orderField = 'hostname', $orderDir = 'asc', $cactiOnly = 'on', $output = 'array') {
  
     $sqlWhere 	= '';
@@ -95,15 +79,11 @@ function getXdpNeighbors(&$total_rows = 0, $rowStart = 1, $rowEnd = 25, $xdpType
     if ($cactiOnly == 'on') { array_push($conditions,"(`host_id` > 0 AND `neighbor_host_id` > 0)"); }
     if ($orderField && ($orderDir != ''))   { $sqlOrder = "order by $orderField $orderDir"; }
     if ($filterVal != '')	{
-				print "Filter:<br>";
 				$searchArray  = array('hostname','neighbor_hostname','interface_name','interface_alias','neighbor_interface_name','neighbor_interface_alias','neighbor_platform', 'neighbor_software');
 				$searchFields = array();
 				$searchParams = array();
 				foreach ($searchArray as $f) { array_push($searchFields,"`$f` LIKE ?"); array_push($searchParams,"%$filterVal%");}
 				$searchMerged = "(".implode(" OR ", $searchFields).")";
-				//pre_print_r($searchFields);
-				//pre_print_r($searchParams);
-				//print "searchMerged: $searchMerged<br>";
 				array_push($conditions,$searchMerged);
 				$params = array_merge($params,$searchParams);
 		}
@@ -116,7 +96,16 @@ function getXdpNeighbors(&$total_rows = 0, $rowStart = 1, $rowEnd = 25, $xdpType
     elseif ($output == 'json') 	{ return(json_encode($result));}
 }
 
-
+/**
+ * Get summary statistics for CDP/LLDP neighbor discoveries
+ * 
+ * Returns aggregated counts of hosts, interfaces with neighbors, and last polling time
+ * from the plugin_neighbor_xdp table.
+ * 
+ * @param int &$total_rows Reference to store row count (set to 1 if any data exists)
+ * 
+ * @return array Associative array with keys: hosts, interfaces, last_polled
+ */
 function getXdpNeighborStats(&$total_rows = 0) {
     
     $numHosts = db_fetch_cell("select count(distinct host_id) from plugin_neighbor_xdp");
@@ -130,7 +119,17 @@ function getXdpNeighborStats(&$total_rows = 0) {
 
 /* Helper and Override functions */
 
-// Emulates perl DBIs fetchall_hashref functionality
+/**
+ * Convert flat database result array into nested associative array structure
+ * 
+ * Emulates Perl DBI's fetchall_hashref functionality. Organizes flat query results
+ * into a multi-dimensional hash structure based on specified key columns.
+ * 
+ * @param array &$result Reference to flat array of database rows
+ * @param array $index_keys Array of column names to use as hierarchical keys
+ * 
+ * @return array Nested associative array indexed by key columns
+ */
 function db_fetch_hash(& $result,$index_keys) {
   $assoc = array();             // The array we're going to be returning
 
@@ -169,6 +168,263 @@ function db_fetch_hash(& $result,$index_keys) {
   return($assoc);
 }
 
+/**
+ * Build SNMP authentication string for binary snmpwalk commands
+ *
+ * @param string $community SNMP community string
+ * @param int $version SNMP version (1, 2, or 3)
+ * @param string $username SNMPv3 username
+ * @param string $password SNMPv3 auth password
+ * @param string $auth_proto SNMPv3 auth protocol
+ * @param string $priv_pass SNMPv3 privacy passphrase
+ * @param string $priv_proto SNMPv3 privacy protocol  
+ * @param string $context SNMPv3 context
+ * @param string $engineid SNMPv3 engine ID
+ * @return array Array with 'auth' => auth string, 'version' => version string
+ */
+function neighbor_build_snmp_auth($community, $version, $username, $password, $auth_proto, $priv_pass, $priv_proto, $context, $engineid) {
+	$snmp_auth = '';
+	
+	if ($version == '1') {
+		$snmp_auth = '-c ' . snmp_escape_string($community);
+	} elseif ($version == '2') {
+		$snmp_auth = '-c ' . snmp_escape_string($community);
+		$version = '2c';
+	} elseif ($version == '3') {
+		$sec_level = ($priv_proto == '[None]' || $priv_pass == '') ? 'authNoPriv' : 'authPriv';
+		
+		$priv_string = '';
+		if ($priv_pass != '') {
+			$priv_string = '-X ' . snmp_escape_string($priv_pass) . ' -x ' . snmp_escape_string($priv_proto);
+		}
+		
+		$context_string = ($context != '') ? '-n ' . snmp_escape_string($context) : '';
+		$engineid_string = ($engineid != '') ? '-e ' . snmp_escape_string($engineid) : '';
+		
+		$snmp_auth = trim('-u ' . snmp_escape_string($username) .
+			' -l ' . snmp_escape_string($sec_level) .
+			' -a ' . snmp_escape_string($auth_proto) .
+			' -A ' . snmp_escape_string($password) .
+			' ' . $priv_string .
+			' ' . $context_string .
+			' ' . $engineid_string);
+	}
+	
+	return array('auth' => $snmp_auth, 'version' => $version);
+}
+
+/**
+ * Process and filter SNMP results removing banned strings
+ *
+ * @param array $temp_array Raw SNMP results
+ * @param bool $snmp_oid_included Whether OID is included in results
+ * @param int $value_output_format Output format constant
+ * @return array Processed SNMP array with 'oid' and 'value' keys
+ */
+function neighbor_process_snmp_results($temp_array, $snmp_oid_included, $value_output_format) {
+	global $banned_snmp_strings;
+	
+	$snmp_array = array();
+	
+	if (!is_array($temp_array) || !sizeof($temp_array)) {
+		return $snmp_array;
+	}
+	
+	// Remove banned strings
+	foreach($temp_array as $key => $value) {
+		foreach($banned_snmp_strings as $item) {
+			if (strstr($value, $item) != '') {
+				unset($temp_array[$key]);
+				continue 2;
+			}
+		}
+	}
+	
+	// Process results for PHP method
+	if ($snmp_oid_included === false) {
+		$o = 0;
+		for (reset($temp_array); $i = key($temp_array); next($temp_array)) {
+			if ($temp_array[$i] != 'NULL') {
+				$snmp_array[$o]['oid'] = preg_replace('/^\./', '', $i);
+				$snmp_array[$o]['value'] = format_snmp_string($temp_array[$i], $snmp_oid_included, $value_output_format);
+			}
+			$o++;
+		}
+	} else {
+		// Process results for binary method
+		$i = 0;
+		foreach($temp_array as $index => $value) {
+			if (preg_match('/(.*) =.*/', $value)) {
+				$snmp_array[$i]['oid']   = trim(preg_replace('/(.*) =.*/', "\\1", $value));
+				$snmp_array[$i]['value'] = format_snmp_string($value, true, $value_output_format);
+				$i++;
+			} else {
+				if ($i > 0) {
+					$snmp_array[$i-1]['value'] .= $value;
+				}
+			}
+		}
+	}
+	
+	return $snmp_array;
+}
+
+/**
+ * Check if SNMP OID is a known optional MIB object that may be legitimately absent
+ * 
+ * Certain SNMP OID queries are expected to fail on devices that don't support
+ * specific features or MIB modules. This function identifies OIDs where a "No Such Object"
+ * response should not generate warning messages, as the absence is normal device behavior.
+ * 
+ * Known Optional MIB Objects:
+ * - ENTITY-MIB: Physical inventory (entPhysicalDescr) - not supported on all platforms
+ * - CISCO-VTP-MIB: VLAN Trunk Protocol - only on switches with VTP enabled
+ * - CISCO-CDP-MIB: Cisco Discovery Protocol - only when CDP is active
+ * 
+ * @param string $oid The SNMP OID to check (must include leading dot)
+ * @return bool True if warnings should be suppressed for this OID
+ */
+function query_snmp_neighbor($oid) {
+	$known_optional_oids = array(
+		'.1.3.6.1.2.1.47.1.1.1.1.2',        // ENTITY-MIB::entPhysicalDescr - Physical entity descriptions
+		'.1.3.6.1.4.1.9.9.68.1.2.2.1.2',    // CISCO-VTP-MIB::vtpVlanState - VLAN Trunk Protocol state
+		'.1.3.6.1.4.1.9.9.46.1.6.1.1.5',    // CISCO-VTP-MIB::vtpVlanIfIndex - VTP VLAN interface index
+		'.1.3.6.1.4.1.9.9.46.1.6.1.1.14',   // CISCO-VTP-MIB::vtpVlanName - VTP VLAN name
+		'.1.3.6.1.4.1.9.9.23.1.2.1.1.6'     // CISCO-CDP-MIB::cdpCacheDeviceId - CDP neighbor device ID
+	);
+	
+	return in_array($oid, $known_optional_oids, true);
+}
+
+/**
+ * Perform SNMP walk using PHP SNMP extension
+ *
+ * @param string $hostname Target hostname/IP
+ * @param string $community SNMP community
+ * @param string $oid OID to walk
+ * @param int $version SNMP version
+ * @param string $username SNMPv3 username
+ * @param string $password SNMPv3 password
+ * @param string $auth_proto SNMPv3 auth protocol
+ * @param string $priv_pass SNMPv3 priv password
+ * @param string $priv_proto SNMPv3 priv protocol
+ * @param int $port SNMP port
+ * @param int $timeout Timeout in milliseconds
+ * @param int $retries Number of retries
+ * @param int $value_output_format Output format
+ * @return array|false Array of results or false on error
+ */
+function neighbor_snmp_walk_php($hostname, $community, $oid, $version, $username, $password, $auth_proto, $priv_pass, $priv_proto, $port, $timeout, $retries, $value_output_format) {
+	global $snmp_error;
+	
+	cacti_oid_numeric_format();
+	snmp_set_quick_print(0);
+	
+	$temp_array = false;
+	
+	try {
+		if ($version == '1') {
+			$temp_array = @snmprealwalk($hostname . ':' . $port, $community, $oid, ($timeout * 1000), $retries);
+		} elseif ($version == 2) {
+			$temp_array = @snmp2_real_walk($hostname . ':' . $port, $community, $oid, ($timeout * 1000), $retries);
+		} else {
+			$sec_level = ($priv_proto == '[None]' || $priv_pass == '') ? 'authNoPriv' : 'authPriv';
+			$temp_array = @snmp3_real_walk($hostname . ':' . $port, $username, $sec_level, $auth_proto, $password, $priv_proto, $priv_pass, $oid, ($timeout * 1000), $retries);
+		}
+	} catch (Exception $e) {
+		cacti_log("WARNING: SNMP PHP Exception: " . $e->getMessage() . ", Device:'$hostname', OID:'$oid'", false);
+		return false;
+	}
+	
+	if ($temp_array === false) {
+		if (!query_snmp_neighbor($oid)) {
+			if (!preg_match('/No Such Object available on this agent at this OID/i', $snmp_error) && 
+			    !preg_match('/currently exists at this OID/i', $snmp_error)) {
+				cacti_log("WARNING: SNMP Error:'$snmp_error', Device:'$hostname', OID:'$oid'", false);
+			}
+		}
+	}
+	
+	return $temp_array;
+}
+
+/**
+ * Perform SNMP walk using binary snmpwalk/snmpbulkwalk commands
+ *
+ * @param string $hostname Target hostname/IP
+ * @param string $oid OID to walk
+ * @param array $auth_info Auth info from neighbor_build_snmp_auth()
+ * @param int $port SNMP port
+ * @param int $timeout Timeout in seconds
+ * @param int $retries Number of retries
+ * @param int $max_oids Max OIDs per request
+ * @param int $value_output_format Output format
+ * @return array|false Array of results or false on error
+ */
+function neighbor_snmp_walk_binary($hostname, $oid, $auth_info, $port, $timeout, $retries, $max_oids, $value_output_format) {
+	$snmp_auth = $auth_info['auth'];
+	$version = $auth_info['version'];
+	$path_snmpbulkwalk = read_config_option('path_snmpbulkwalk');
+	
+	$oidCheck = (read_config_option('oid_increasing_check_disable') == 'on') ? '-Cc' : '';
+	
+	$temp_array = array();
+	
+	if (file_exists($path_snmpbulkwalk) && ($version > 1) && ($max_oids > 1)) {
+		$temp_array = exec_into_array(cacti_escapeshellcmd($path_snmpbulkwalk) .
+			' -O QnU' . ($value_output_format == SNMP_STRING_OUTPUT_HEX ? 'x ' : ' ') . $snmp_auth .
+			' -v ' . $version .
+			' -t ' . $timeout .
+			' -r ' . $retries .
+			' -Cr' . $max_oids .
+			' ' . $oidCheck . ' ' .
+			cacti_escapeshellarg($hostname) . ':' . $port . ' ' .
+			cacti_escapeshellarg($oid));
+	} else {
+		$temp_array = exec_into_array(cacti_escapeshellcmd(read_config_option('path_snmpwalk')) .
+			' -O QnU ' . ($value_output_format == SNMP_STRING_OUTPUT_HEX ? 'x ' : ' ') . $snmp_auth .
+			' -v ' . $version .
+			' -t ' . $timeout .
+			' -r ' . $retries .
+			' ' . $oidCheck . ' ' .
+			cacti_escapeshellarg($hostname) . ':' . $port . ' ' .
+			cacti_escapeshellarg($oid));
+	}
+	
+	if (substr_count(implode(' ', $temp_array), 'Timeout:')) {
+		cacti_log("WARNING: SNMP Error:'Timeout', Device:'$hostname', OID:'$oid'", false);
+	}
+	
+	return $temp_array;
+}
+
+/**
+ * Perform SNMP walk operation using either PHP extension or binary commands.
+ * 
+ * This is a wrapper function that performs SNMP walks using either PHP's native
+ * SNMP functions or binary SNMP commands (snmpwalk/snmpbulkwalk). It handles
+ * version-specific authentication and processes results into a standardized format.
+ * 
+ * @param string $hostname      The hostname or IP address of the device
+ * @param string $community     The SNMP community string (for v1/v2)
+ * @param string $oid           The OID to walk
+ * @param string $version       The SNMP version ('1', '2', or '3')
+ * @param string $username      The SNMPv3 username
+ * @param string $password      The SNMPv3 authentication password
+ * @param string $auth_proto    The SNMPv3 authentication protocol (MD5, SHA, etc.)
+ * @param string $priv_pass     The SNMPv3 privacy password
+ * @param string $priv_proto    The SNMPv3 privacy protocol (DES, AES, etc.)
+ * @param string $context       The SNMPv3 context name
+ * @param int    $port          The SNMP port number (default 161)
+ * @param int    $timeout       The timeout in milliseconds (default 500)
+ * @param int    $retries       The number of retries (default 0)
+ * @param int    $max_oids      The maximum number of OIDs per request for bulk operations (default 10)
+ * @param int    $environ       The environment constant (default SNMP_POLLER)
+ * @param string $engineid      The SNMPv3 engine ID (default '')
+ * @param int    $value_output_format The output format for values (default SNMP_STRING_OUTPUT_GUESS)
+ * 
+ * @return array An array of associative arrays with 'oid' and 'value' keys, or empty array on failure
+ */
 function plugin_cacti_snmp_walk($hostname, $community, $oid, $version, $username, $password,
         $auth_proto, $priv_pass, $priv_proto, $context,
         $port = 161, $timeout = 500, $retries = 0, $max_oids = 10, $environ = SNMP_POLLER,
@@ -177,7 +433,6 @@ function plugin_cacti_snmp_walk($hostname, $community, $oid, $version, $username
         global $config, $banned_snmp_strings, $snmp_error;
 
         $snmp_oid_included = true;
-        $snmp_auth             = '';
         $snmp_array        = array();
         $temp_array        = array();
 
@@ -188,172 +443,44 @@ function plugin_cacti_snmp_walk($hostname, $community, $oid, $version, $username
         $path_snmpbulkwalk = read_config_option('path_snmpbulkwalk');
 
         if (snmp_get_method('walk', $version, $context, $engineid, $value_output_format) == SNMP_METHOD_PHP) {
-                /* make sure snmp* is verbose so we can see what types of data
-                we are getting back */
-
-                /* force php to return numeric oid's */
-                cacti_oid_numeric_format();
-
-                if (function_exists('snmprealwalk')) {
-                        $snmp_oid_included = false;
-                }
-
-                snmp_set_quick_print(0);
-
-                if ($version == '1') {
-                        $temp_array = snmprealwalk($hostname . ':' . $port, $community, $oid, ($timeout * 1000), $retries);
-                } elseif ($version == 2) {
-                        $temp_array = snmp2_real_walk($hostname . ':' . $port, $community, $oid, ($timeout * 1000), $retries);
-                } else {
-                        if ($priv_proto == '[None]' || $priv_pass == '') {
-                                $sec_level = 'authNoPriv';
-                                $priv_proto = '';
-                        } else {
-                                $sec_level = 'authPriv';
-                        }
-
-                        $temp_array = snmp3_real_walk($hostname . ':' . $port, $username, $sec_level, $auth_proto, $password, $priv_proto, $priv_pass, $oid, ($timeout * 1000), $retries);
-                }
-
-                if ($temp_array === false) {
-                        if ($temp_array === false) {
-				// currently exists at this OID
-				if (!preg_match('/No Such Object available on this agent at this OID/',$snmp_error) && !preg_match('/currently exists at this OID/',$snmp_error)) {
-                                	cacti_log("WARNING: SNMP Error:'$snmp_error', Device:'$hostname', OID:'$oid'", false);
-				}
-                        } elseif ($oid == '.1.3.6.1.2.1.47.1.1.1.1.2' ||
-                                $oid == '.1.3.6.1.4.1.9.9.68.1.2.2.1.2' ||
-                                $oid == '.1.3.6.1.4.1.9.9.46.1.6.1.1.5' ||
-                                $oid == '.1.3.6.1.4.1.9.9.46.1.6.1.1.14' ||
-                                $oid == '.1.3.6.1.4.1.9.9.23.1.2.1.1.6') {
-                                /* do nothing */
-                        } else {
-                                cacti_log("WARNING: SNMP Error, Device:'$hostname', OID:'$oid'", false);
-                        }
-                }
-
-                /* check for bad entries */
+                $snmp_oid_included = function_exists('snmprealwalk') ? false : true;
+                
+                $temp_array = neighbor_snmp_walk_php($hostname, $community, $oid, $version, $username, 
+                        $password, $auth_proto, $priv_pass, $priv_proto, $port, $timeout, $retries, $value_output_format);
+                        
                 if ($temp_array !== false && sizeof($temp_array)) {
-                        foreach($temp_array as $key => $value) {
-                                foreach($banned_snmp_strings as $item) {
-                                        if (strstr($value, $item) != '') {
-                                                unset($temp_array[$key]);
-                                                continue 2;
-                                        }
-                                }
-                        }
-
-                        $o = 0;
-                        for (reset($temp_array); $i = key($temp_array); next($temp_array)) {
-                                if ($temp_array[$i] != 'NULL') {
-                                        $snmp_array[$o]['oid'] = preg_replace('/^\./', '', $i);
-                                        $snmp_array[$o]['value'] = format_snmp_string($temp_array[$i], $snmp_oid_included, $value_output_format);
-                                }
-                                $o++;
-                        }
+                        $snmp_array = neighbor_process_snmp_results($temp_array, $snmp_oid_included, $value_output_format);
                 }
         } else {
-                /* ucd/net snmp want the timeout in seconds */
                 $timeout = ceil($timeout / 1000);
-
-                if ($version == '1') {
-                        $snmp_auth = '-c ' . snmp_escape_string($community); /* v1/v2 - community string */
-                } elseif ($version == '2') {
-                        $snmp_auth = '-c ' . snmp_escape_string($community); /* v1/v2 - community string */
-                        $version = '2c'; /* ucd/net snmp prefers this over '2' */
-                } elseif ($version == '3') {
-                        if ($priv_proto == '[None]' || $priv_pass == '') {
-                                $sec_level = 'authNoPriv';
-                                $priv_proto = '';
-                        } else {
-                                $sec_level = 'authPriv';
-                        }
-
-                        if ($priv_pass != '') {
-                                $priv_pass = '-X ' . snmp_escape_string($priv_pass) . ' -x ' . snmp_escape_string($priv_proto);
-                        } else {
-                                $priv_pass = '';
-                        }
-
-                        if ($context != '') {
-                                $context = '-n ' . snmp_escape_string($context);
-                        } else {
-                                $context = '';
-                        }
-
-                        if ($engineid != '') {
-                                $engineid = '-e ' . snmp_escape_string($engineid);
-                        } else {
-                                $engineid = '';
-                        }
-
-                        $snmp_auth = trim('-u ' . snmp_escape_string($username) .
-                                ' -l ' . snmp_escape_string($sec_level) .
-                                ' -a ' . snmp_escape_string($auth_proto) .
-                                ' -A ' . snmp_escape_string($password) .
-                                ' '    . $priv_pass .
-                                ' '    . $context .
-                                ' '    . $engineid);
-                }
-
-                if (read_config_option('oid_increasing_check_disable') == 'on') {
-                        $oidCheck = '-Cc';
-                } else {
-                        $oidCheck = '';
-                }
-
-                if (file_exists($path_snmpbulkwalk) && ($version > 1) && ($max_oids > 1)) {
-                        $temp_array = exec_into_array(cacti_escapeshellcmd($path_snmpbulkwalk) .
-                                ' -O QnU'  . ($value_output_format == SNMP_STRING_OUTPUT_HEX ? 'x ':' ') . $snmp_auth .
-                                ' -v '     . $version .
-                                ' -t '     . $timeout .
-                                ' -r '     . $retries .
-                                ' -Cr'     . $max_oids .
-                                ' '        . $oidCheck . ' ' .
-                                cacti_escapeshellarg($hostname) . ':' . $port . ' ' .
-                                cacti_escapeshellarg($oid));
-                } else {
-                        $temp_array = exec_into_array(cacti_escapeshellcmd(read_config_option('path_snmpwalk')) .
-                                ' -O QnU ' . ($value_output_format == SNMP_STRING_OUTPUT_HEX ? 'x ':' ') . $snmp_auth .
-                                ' -v '     . $version .
-                                ' -t '     . $timeout .
-                                ' -r '     . $retries .
-                                ' '        . $oidCheck . ' ' .
-                                ' '        . cacti_escapeshellarg($hostname) . ':' . $port .
-                                ' '        . cacti_escapeshellarg($oid));
-                }
-
-                if (substr_count(implode(' ', $temp_array), 'Timeout:')) {
-                        cacti_log("WARNING: SNMP Error:'Timeout', Device:'$hostname', OID:'$oid'", false);
-                }
-
-                /* check for bad entries */
+                $auth_info = neighbor_build_snmp_auth($community, $version, $username, $password, $auth_proto, $priv_pass, $priv_proto, $context, $engineid);
+                
+                $temp_array = neighbor_snmp_walk_binary($hostname, $oid, $auth_info, $port, $timeout, $retries, $max_oids, $value_output_format);
+                
                 if (is_array($temp_array) && sizeof($temp_array)) {
-                        foreach($temp_array as $key => $value) {
-                                foreach($banned_snmp_strings as $item) {
-                                        if (strstr($value, $item) != '') {
-                                                unset($temp_array[$key]);
-                                                continue 2;
-                                        }
-                                }
-                        }
-
-                        $i = 0;
-                        foreach($temp_array as $index => $value) {
-                                if (preg_match('/(.*) =.*/', $value)) {
-                                        $snmp_array[$i]['oid']   = trim(preg_replace('/(.*) =.*/', "\\1", $value));
-                                        $snmp_array[$i]['value'] = format_snmp_string($value, true, $value_output_format);
-                                        $i++;
-                                } else {
-                                        $snmp_array[$i-1]['value'] .= $value;
-                                }
-                        }
+                        $snmp_array = neighbor_process_snmp_results($temp_array, $snmp_oid_included, $value_output_format);
                 }
         }
 
         return $snmp_array;
 }
 
+/**
+ * Retrieve neighbor automation rules with filtering and pagination
+ * 
+ * Queries the plugin_neighbor_rules table for automation rules that control
+ * automatic graph creation and device organization based on neighbor relationships.
+ * 
+ * @param int &$total_rows Reference to store total matching rows
+ * @param int $rowStart Starting row number (0-based, default 1)
+ * @param int $rowEnd Maximum rows per page (default 25)
+ * @param string $filterVal Search filter for rule name (default '')
+ * @param string $orderField Column to sort by (default 'hostname')
+ * @param string $orderDir Sort direction 'asc' or 'desc' (default 'asc')
+ * @param string $output Return format: 'array' or 'json' (default 'array')
+ * 
+ * @return array|string Array of rule records or JSON string
+ */
 function get_neighbor_rules(&$total_rows = 0, $rowStart = 1, $rowEnd = 25, $filterVal = '', $orderField = 'hostname', $orderDir = 'asc', $output = 'array') {
 	
 		$sqlWhere 	= '';
@@ -370,12 +497,19 @@ function get_neighbor_rules(&$total_rows = 0, $rowStart = 1, $rowEnd = 25, $filt
     $sqlWhere = count($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
     $result = db_fetch_assoc_prepared("select * from plugin_neighbor_rules rules $sqlWhere $sqlOrder $sqlLimit", $params);
     $total_rows = db_fetch_cell_prepared("select count(*) as total_rows from plugin_neighbor_rules rules $sqlWhere",$params);
-    //print "Set total_rows = $total_rows<br>";
     if ($output == 'array') 	{ return($result);}
     elseif ($output == 'json') 	{ return(json_encode($result));}
 	
 }
 
+/**
+ * Display filter form for neighbor rules listing page
+ * 
+ * Renders an HTML filter form with search input, status dropdown, and rows selector
+ * for the neighbor rules management page. Includes JavaScript for AJAX filtering.
+ * 
+ * @return void Outputs HTML form and JavaScript
+ */
 function get_neighbor_rules_filter() {
 	global $automation_graph_rules_actions, $config, $item_rows;
 	
@@ -464,8 +598,17 @@ function get_neighbor_rules_filter() {
 	
 }
 
-
-
+/**
+ * Display filter form for neighbor discovery listings
+ * 
+ * Renders an HTML table row with filter controls for the neighbor discovery display,
+ * including search input, protocol type selector, host filter, and pagination controls.
+ * The action parameter determines which optional filters are displayed.
+ * 
+ * @param string $action Page context: 'xdp' shows protocol filter, '' for generic filter
+ * 
+ * @return void Outputs HTML form elements and JavaScript
+ */
 function neighbor_filter($action='') {
 	global $item_rows, $config;
 	$rows = get_request_var('rows');
@@ -476,7 +619,7 @@ function neighbor_filter($action='') {
 		<table class='filterTable'>
 			<tr>
 				<td> <?php print __('Search', 'neighbor');?> </td>
-				<td> <input type='text' id='filter' size='25' value='<?php print get_request_var('filter');?>' onChange='applyFilter()'></td>
+				<td> <input type='text' id='filter' size='25' value='<?php print html_escape(get_request_var('filter'));?>' onChange='applyFilter()'></td>
 				<?php
 				if ($action == 'xdp') {
 				?>
@@ -524,10 +667,6 @@ function neighbor_filter($action='') {
 			
 			var elem = $(e);
 			var cacti_only;
-			//if (elem.attr('id') == 'cacti_only') {
-			//	console.log("Current cacti_only:",elem.val());
-			//	cacti_only = elem.val() == 'on' ? 'off' : 'on';	// Toggle the value
-			//}
 			popFired = true;
 			strURL  = 'neighbor.php?header=false&action=xdp';
 		  strURL += '&filter=' + $('#filter').val();
@@ -536,7 +675,6 @@ function neighbor_filter($action='') {
 			strURL += '&page=' + $('#page').val();
 			strURL += '&host_id=' + ($('#host_id').val() > 0 ? $('#host_id').val() : '');
 			strURL += '&cacti_only=' + ($('#cacti_only').is(':checked') ? 'on' : 'off');
-			//strURL += '&cacti_only=' + cacti_only;
 			loadPageNoHeader(strURL);
 		}
 
@@ -557,7 +695,6 @@ function neighbor_filter($action='') {
 	</tr>
 			
 <?php
-// Back to PHP
 
 
 
@@ -565,12 +702,118 @@ function neighbor_filter($action='') {
 
 
 ?>
+	
 	<?php
 }
 
-// Fetch all the neighbor hosts
-// Copied from thold_plugin
+/**
+ * Get user and group authentication policies
+ *
+ * @param int $user User ID
+ * @return array Array of policy arrays containing id, type, policy_graphs, policy_hosts, policy_graph_templates
+ */
+function neighbor_get_user_policies($user) {
+	$policies = array();
+	
+	// Get group policies for user
+	$group_policies = db_fetch_assoc_prepared("SELECT uag.id, 'group' AS type,
+		uag.policy_graphs, uag.policy_hosts, uag.policy_graph_templates
+		FROM user_auth_group AS uag
+		INNER JOIN user_auth_group_members AS uagm
+		ON uag.id = uagm.group_id
+		WHERE uag.enabled = 'on'
+		AND uagm.user_id = ?",
+		array($user)
+	);
+	
+	if (is_array($group_policies) && sizeof($group_policies)) {
+		$policies = array_merge($policies, $group_policies);
+	}
+	
+	// Get user policy
+	$user_policy = db_fetch_row_prepared("SELECT id, 'user' AS type,
+		policy_graphs, policy_hosts, policy_graph_templates
+		FROM user_auth
+		WHERE id = ?",
+		array($user)
+	);
+	
+	if (is_array($user_policy) && sizeof($user_policy)) {
+		$policies[] = $user_policy;
+	}
+	
+	return $policies;
+}
 
+/**
+ * Build SQL JOIN clauses for user authorization policies
+ *
+ * @param array $policies Array of policy records
+ * @param string &$sql_select Reference to SELECT clause to append to
+ * @param string &$sql_join Reference to JOIN clause to append to
+ * @param string &$sql_having Reference to HAVING clause to append to
+ * @return void Modifies parameters by reference
+ */
+function neighbor_build_auth_sql_clauses($policies, &$sql_select, &$sql_join, &$sql_having) {
+	$i = 0;
+	
+	foreach ($policies as $policy) {
+		// Build HAVING clause for graphs policy
+		if ($policy['policy_graphs'] == 1) {
+			$sql_having .= ($sql_having != '' ? ' OR ' : '') . "(user$i IS NULL";
+		} else {
+			$sql_having .= ($sql_having != '' ? ' OR ' : '') . "(user$i IS NOT NULL";
+		}
+
+		// Build JOIN for graph permissions
+		$sql_join   .= 'LEFT JOIN user_auth_' . ($policy['type'] == 'user' ? '':'group_') . "perms AS uap$i ON (gl.id=uap$i.item_id AND uap$i.type=1 AND uap$i." . $policy['type'] . "_id=" . $policy['id'] . ") ";
+		$sql_select .= ($sql_select != '' ? ', ' : '') . "uap$i." . $policy['type'] . "_id AS user$i";
+		$i++;
+
+		// Build HAVING clause for hosts policy
+		if ($policy['policy_hosts'] == 1) {
+			$sql_having .= " OR (user$i IS NULL";
+		} else {
+			$sql_having .= " OR (user$i IS NOT NULL";
+		}
+
+		// Build JOIN for host permissions
+		$sql_join   .= 'LEFT JOIN user_auth_' . ($policy['type'] == 'user' ? '':'group_') . "perms AS uap$i ON (gl.host_id=uap$i.item_id AND uap$i.type=3 AND uap$i." . $policy['type'] . "_id=" . $policy['id'] . ") ";
+		$sql_select .= ($sql_select != '' ? ', ' : '') . "uap$i." . $policy['type'] . "_id AS user$i";
+		$i++;
+
+		// Build HAVING clause for graph templates policy  
+		if ($policy['policy_graph_templates'] == 1) {
+			$sql_having .= " OR (user$i IS NULL";
+		} else {
+			$sql_having .= " OR (user$i IS NOT NULL";
+		}
+
+		// Build JOIN for graph template permissions
+		$sql_join   .= 'LEFT JOIN user_auth_' . ($policy['type'] == 'user' ? '':'group_') . "perms AS uap$i ON (gl.graph_template_id=uap$i.item_id AND uap$i.type=4 AND uap$i." . $policy['type'] . "_id=" . $policy['id'] . ") ";
+		$sql_select .= ($sql_select != '' ? ', ' : '') . "uap$i." . $policy['type'] . "_id AS user$i";
+		$i++;
+
+		// Close parentheses for all three policy checks
+		$sql_having .= "))";
+	}
+}
+
+/**
+ * Get allowed devices with authentication and authorization applied
+ * 
+ * This function retrieves a list of devices that a user is authorized to view,
+ * taking into account user and group permissions for graphs, hosts, and graph templates.
+ * 
+ * @param string $sql_where Additional WHERE clause conditions
+ * @param string $order_by ORDER BY clause (default 'description')
+ * @param string $limit LIMIT clause (default '')
+ * @param int &$total_rows Reference to store total row count
+ * @param int $user User ID (0 = current user, -1 = bypass auth)
+ * @param int $host_id Specific host ID to filter (0 = all hosts)
+ * 
+ * @return array Array of host records the user is authorized to view
+ */
 function neighbor_get_allowed_devices($sql_where = '', $order_by = 'description', $limit = '', &$total_rows = 0, $user = 0, $host_id = 0) {
 	if ($limit != '') {
 		$limit = "LIMIT $limit";
@@ -772,7 +1015,15 @@ function neighbor_get_allowed_devices($sql_where = '', $order_by = 'description'
 
 /* VRF Mapping Functions */
 
-// Get the VRF maps for all vrf rules defined
+/**
+ * Build VRF topology maps for all defined VRF rules
+ * 
+ * Iterates through all VRF mapping rules and builds network topology data
+ * by querying neighbor relationships and organizing them by VRF. Used for
+ * multi-tenancy network visualization.
+ * 
+ * @return array Nested array of VRF mappings with topology data
+ */
 function get_neighbor_vrf_maps() {
 	
 	// Initialize mapping array BEFORE the loop to preserve all rules' mappings
@@ -805,20 +1056,34 @@ function get_neighbor_vrf_maps() {
 	return($mapping);
 }
 
-// Get a list of the vrf rules
+/**
+ * Retrieve all VRF mapping rules from database
+ * 
+ * Returns all records from the plugin_neighbor_vrf_rules table which define
+ * how neighbor relationships should be organized by VRF for multi-tenant networks.
+ * 
+ * @return array Array of VRF rule records
+ */
 function get_vrf_rules() {
 	$rules = db_fetch_assoc("SELECT * from plugin_neighbor_vrf_rules");
 	return($rules);
 }
 
+/**
+ * Build SQL query for VRF-based neighbor data retrieval
+ * 
+ * Constructs a complex SQL query that joins host and neighbor data tables
+ * based on VRF rule configuration, applying filters for matching hosts and edges.
+ * 
+ * @param array $rule VRF rule configuration record
+ * @param string $host_filter Optional hostname filter (default '')
+ * @param string $edge_filter Optional edge/connection filter (default '')
+ * 
+ * @return string Complete SQL query string
+ */
 function neighbor_build_vrf_data_query_sql($rule,$host_filter = '',$edge_filter='') {
 	cacti_log(__FUNCTION__ . ' called: ' . serialize($rule), false, 'NEIGHBOR TRACE', POLLER_VERBOSITY_HIGH);
 
-	/*
-	$field_names = get_field_names($rule['snmp_query_id']);
-	$sql_query = 'SELECT h.description AS automation_host, host_id, h.disabled, h.status, snmp_query_id, snmp_index ';
-	$i = 0;
-	*/
 	
 	$sql_query = 'SELECT h.description AS automation_host, h.disabled, h.status ';
 	$neighbor_options = isset($rule['neighbor_options']) ? explode(",",$rule['neighbor_options']) : array();
@@ -837,7 +1102,6 @@ function neighbor_build_vrf_data_query_sql($rule,$host_filter = '',$edge_filter=
 	$sql_where2 = "(".neighbor_build_vrf_object_rule_item_filter($rule_id).")";
 	$sql_where_combined = array($sql_where,$sql_where2);
 	
-	//if ($host_filter) { array_push($sql_where_combined,"(h.description like '%$host_filter%')");}
 	
 	$table_list = implode(",",$tables);
 	$table_join_list = implode(" ",$table_join);
@@ -848,7 +1112,6 @@ function neighbor_build_vrf_data_query_sql($rule,$host_filter = '',$edge_filter=
 	    $query_where
 	";
 
-	error_log("neighbor_build_data_query_sql():".$sql_query);
 	cacti_log(__FUNCTION__ . ' returns: ' . $sql_query, false, 'NEIGHBOR TRACE', POLLER_VERBOSITY_HIGH);
 
 	return $sql_query;
