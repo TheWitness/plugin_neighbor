@@ -67,7 +67,7 @@ switch(get_request_var('action')) {
 		render_neighbor_page('hosts');
 		break;
 	default:
-		render_neighbor_page('neighbor_summary');
+		render_neighbor_page('display_interface_map');
 		break;
 }
 
