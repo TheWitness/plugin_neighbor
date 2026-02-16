@@ -30,52 +30,41 @@ chdir('../../');
 include_once('./include/auth.php');
 include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_functions.php');
 
+/**
+ * Render a neighbor page with standard header/footer wrapper
+ * 
+ * @param callable $callback Function to call for page content
+ * @return void
+ */
+function render_neighbor_page($callback) {
+	general_header();
+	neighbor_tabs();
+	call_user_func($callback);
+	bottom_footer();
+}
 
 set_default_action('summary');
 
 switch(get_request_var('action')) {
 	case 'neighbor_map':
-		general_header();
-		neighbor_tabs();
-		display_interface_map();
-		bottom_footer();
+	case 'maps':
+		render_neighbor_page('display_interface_map');
 		break;
 	case 'neighbor_interface':
-		general_header();
-		neighbor_tabs();
-		display_neighbors();
-		bottom_footer();
+		render_neighbor_page('display_neighbors');
 		break;
 	case 'xdp':
-		general_header();
-		neighbor_tabs();
-		show_xdp_neighbors();
-		bottom_footer();
-		break;
-	case 'maps':
-		general_header();
-		neighbor_tabs();
-		display_interface_map();
-		bottom_footer();
+		render_neighbor_page('show_xdp_neighbors');
 		break;
 	case 'ajax_hosts':
-		get_allowed_ajax_hosts(true, false, 'h.id IN (SELECT host_id FROM plugin_neighbor_xdp)');
-		break;
 	case 'ajax_hosts_noany':
 		get_allowed_ajax_hosts(true, false, 'h.id IN (SELECT host_id FROM plugin_neighbor_xdp)');
 		break;
 	case 'hoststat':
-		general_header();
-		neighbor_tabs();
-		hosts();
-		bottom_footer();
+		render_neighbor_page('hosts');
 		break;
 	default:
-		general_header();
-		neighbor_tabs();
-		display_interface_map();
-		bottom_footer();
-
+		render_neighbor_page('neighbor_summary');
 		break;
 }
 
@@ -86,30 +75,67 @@ $_SESSION['sess_nav_level_cache'] = '';
 // CDP & LLDP Neighbors 
 ////
 
+/**
+ * Display neighbor interface listing page
+ * 
+ * Renders the neighbor interface view with JavaScript data tables for displaying
+ * CDP/LLDP, IPv4 subnet, or interface alias-based neighbor relationships.
+ * 
+ * @return void Outputs HTML and JavaScript includes
+ */
 function display_neighbors() {
-	
-	$neighbor_type = get_request_var('neighbor_type') ? get_request_var('neighbor_type') : 'xdp';
+	// Validate neighbor_type against whitelist
+	$neighbor_type = 'xdp';
+	if (isset_request_var('neighbor_type')) {
+		$type = get_request_var('neighbor_type');
+		$allowed_types = array('xdp', 'ipv4', 'ifalias');
+		if (in_array($type, $allowed_types, true)) {
+			$neighbor_type = $type;
+		}
+	}
 	
 	print "<div id='neighbor_toolbar'></div>\n";
 	print "<div id='xdp_neighbors_holder'></div>\n";
-	print "<form>";
-	print "<input type='hidden' id='table' value='xdp'>";
-	print "</form>";
-	printf("<link rel='stylesheet' type='text/css' href='%s'>",'css/ionicons.min.css');
-	printf("<script type='text/javascript' src='%s'></script>",'js/tables_interface.js');
-	printf("<script type='text/javascript' src='%s'></script>",'js/tables_'.$neighbor_type.'.js');
-	
+	print "<form>\n";
+	print "<input type='hidden' id='table' value='xdp'>\n";
+	print "</form>\n";
+	printf("<link rel='stylesheet' type='text/css' href='%s'>\n", 'css/ionicons.min.css');
+	printf("<script type='text/javascript' src='%s'></script>\n", 'js/tables_interface.js');
+	printf("<script type='text/javascript' src='%s'></script>\n", 'js/tables_' . $neighbor_type . '.js');
 }
 
 // Summary Action
 
+/**
+ * Display neighbor discovery summary statistics
+ * 
+ * Shows aggregated counts of discovered neighbors by protocol type.
+ * 
+ * @return void Outputs HTML summary table
+ */
 function neighbor_summary() {
+	/* ================= input validation ================= */
+	$filters = array(
+		'rows' => array(
+			'filter' => FILTER_VALIDATE_INT,
+			'default' => '-1'
+		),
+		'sort_column' => array(
+			'filter' => FILTER_CALLBACK,
+			'default' => 'method',
+			'options' => array('options' => 'sanitize_search_string')
+		),
+		'sort_direction' => array(
+			'filter' => FILTER_CALLBACK,
+			'default' => 'ASC',
+			'options' => array('options' => 'sanitize_search_string')
+		)
+	);
+	validate_store_request_vars($filters, 'sess_neighbor');
+	/* ================= end input validation ================= */
 	
 	$total_rows = 0;
-	$rows = 1;
-	
 	$xdpNeighborStats = getXdpNeighborStats($total_rows);
-	//print "<pre>".print_r($xdpNeighborStats,1)."</pre>";
 	
 	/* if the number of rows is -1, set it to the default */
 	if (get_request_var('rows') == -1) {
@@ -118,8 +144,7 @@ function neighbor_summary() {
 		$rows = get_request_var('rows');
 	}
 	
-	print 
-	html_start_box('Neighbor Summary', '50%','' , '4', 'left', '');
+	html_start_box('Neighbor Summary', '50%', '', '4', 'left', '');
 
 	$display_text = array(
 		'method'         => array('display' => __('Method', 'neighbor'),     	'sort' => '',	'align' => 'left'),
@@ -134,8 +159,6 @@ function neighbor_summary() {
 		form_end_row();
 	}
 	html_end_box();
-	print $nav;
-	
 }
 
 
