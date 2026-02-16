@@ -481,32 +481,39 @@ function neighbor_display_matching_hosts($rule, $rule_type, $url) {
 
 	html_end_box();
 
-	/* form the 'where' clause for our main sql query */
+	/* form the 'where' clause for our main sql query using prepared statements */
+	$where_conditions = array();
+	$where_params = array();
+	
 	if (get_request_var('filterd') != '') {
-		$sql_where = "WHERE (h.hostname LIKE '%" . get_request_var('filterd') . "%' OR h.description LIKE '%" . get_request_var('filterd') . "%' OR ht.name LIKE '%" . get_request_var('filterd') . "%')";
-	} else {
-		$sql_where = '';
+		$filter_value = '%' . get_request_var('filterd') . '%';
+		$where_conditions[] = "(h.hostname LIKE ? OR h.description LIKE ? OR ht.name LIKE ?)";
+		array_push($where_params, $filter_value, $filter_value, $filter_value);
 	}
 
 	if (get_request_var('host_status') == '-1') {
 		/* Show all items */
 	} elseif (get_request_var('host_status') == '-2') {
-		$sql_where .= ($sql_where != '' ? " AND h.disabled='on'" : "WHERE h.disabled='on'");
+		$where_conditions[] = "h.disabled='on'";
 	} elseif (get_request_var('host_status') == '-3') {
-		$sql_where .= ($sql_where != '' ? " AND h.disabled=''" : "WHERE h.disabled=''");
+		$where_conditions[] = "h.disabled=''";
 	} elseif (get_request_var('host_status') == '-4') {
-		$sql_where .= ($sql_where != '' ? " AND (h.status!='3' or h.disabled='on')" : "WHERE (h.status!='3' or h.disabled='on')");
-	}else {
-		$sql_where .= ($sql_where != '' ? ' AND (h.status=' . get_request_var('host_status') . " AND h.disabled = '')" : "WHERE (h.status=" . get_request_var('host_status') . " AND h.disabled = '')");
+		$where_conditions[] = "(h.status!='3' OR h.disabled='on')";
+	} else {
+		$where_conditions[] = "(h.status = ? AND h.disabled = '')";
+		$where_params[] = get_request_var('host_status');
 	}
 
 	if (get_request_var('host_template_id') == '-1') {
 		/* Show all items */
 	} elseif (get_request_var('host_template_id') == '0') {
-		$sql_where .= ($sql_where != '' ? ' AND h.host_template_id=0' : 'WHERE h.host_template_id=0');
+		$where_conditions[] = 'h.host_template_id=0';
 	} elseif (!isempty_request_var('host_template_id')) {
-		$sql_where .= ($sql_where != '' ? ' AND h.host_template_id=' . get_request_var('host_template_id') : 'WHERE h.host_template_id=' . get_request_var('host_template_id'));
+		$where_conditions[] = 'h.host_template_id = ?';
+		$where_params[] = get_request_var('host_template_id');
 	}
+
+	$sql_where = count($where_conditions) > 0 ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
 
 	$host_graphs       = array_rekey(db_fetch_assoc('SELECT host_id, count(*) as graphs FROM graph_local GROUP BY host_id'), 'host_id', 'graphs');
 	$host_data_sources = array_rekey(db_fetch_assoc('SELECT host_id, count(*) as data_sources FROM data_local GROUP BY host_id'), 'host_id', 'data_sources');
@@ -518,8 +525,6 @@ function neighbor_display_matching_hosts($rule, $rule_type, $url) {
 		LEFT JOIN host_template AS ht
 		ON (h.host_template_id=ht.id) ';
 
-	$hosts = db_fetch_assoc($sql_query);
-
 	/* get the WHERE clause for matching hosts */
 	if ($sql_where != '') {
 		$sql_filter = ' AND (' . neighbor_build_matching_objects_filter($rule['id'], $rule_type) . ')';
@@ -529,7 +534,12 @@ function neighbor_display_matching_hosts($rule, $rule_type, $url) {
 
 	/* now we build up a new query for counting the rows */
 	$rows_query = $sql_query . $sql_where . $sql_filter;
-	$total_rows = count((array) db_fetch_assoc($rows_query, false));
+	
+	if (count($where_params) > 0) {
+		$total_rows = count((array) db_fetch_assoc_prepared($rows_query, $where_params));
+	} else {
+		$total_rows = count((array) db_fetch_assoc($rows_query, false));
+	}
 
 	$sortby = get_request_var('sort_column');
 	if ($sortby=='hostname') {
@@ -539,7 +549,12 @@ function neighbor_display_matching_hosts($rule, $rule_type, $url) {
 	$sql_query = $rows_query .
 		' ORDER BY ' . $sortby . ' ' . get_request_var('sort_direction') .
 		' LIMIT ' . ($rows*(get_request_var('paged')-1)) . ',' . $rows;
-	$hosts = db_fetch_assoc($sql_query, false);
+	
+	if (count($where_params) > 0) {
+		$hosts = db_fetch_assoc_prepared($sql_query, $where_params);
+	} else {
+		$hosts = db_fetch_assoc($sql_query, false);
+	}
 
 	$nav = html_nav_bar($url, MAX_DISPLAY_PAGES, get_request_var('paged'), $rows, $total_rows, 7, 'Devices', 'paged', 'main');
 
