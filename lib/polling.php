@@ -71,14 +71,6 @@ function neighbor_poller_output(&$rrd_update_array) {
 	return $rrd_update_array;
 }
 
-
-function cacti_tag_log($tag,$message) {
-	$lineArr = explode("\n",$message);
-	foreach ($lineArr as $line) {
-		cacti_log(trim($line),$tag);
-	}
-}
-
 // Process the deltas from the poller_output hook
 // Called from poller_bottom hook
 
@@ -86,7 +78,7 @@ function cacti_tag_log($tag,$message) {
 
 function process_poller_deltas() {
 	
-	cacti_tag_log("NEIGHBOR POLLER","process_poller_deltas() is running");
+	cacti_log("process_poller_deltas() is running", true, "NEIGHBOR POLLER");
 	
 	// Fetch the poller output samples
 
@@ -104,7 +96,7 @@ function process_poller_deltas() {
 
 		
 	foreach ($hash as $rrdFile => $data) {
-		cacti_tag_log("NEIGHBOR POLLER","process_poller_deltas() is processing RRD:$rrdFile,with data:",print_r($data,1));
+		cacti_log("process_poller_deltas() is processing RRD:$rrdFile,with data:" . print_r($data,1), true, "NEIGHBOR POLLER");
 		$timestamps = array_keys($data);
 		rsort($timestamps);		// We want the last two timestamps, so order them in reverse
 		db_execute_prepared("INSERT into plugin_neighbor_log values (?,NOW(),?)",array('','process_poller_deltas() is running. Timestamps:'.print_r($timestamps,1)));
@@ -115,14 +107,14 @@ function process_poller_deltas() {
 			$timeDelta = $now - $before;
 			$poller_interval = read_config_option('poller_interval') ? read_config_option('poller_interval') : 300;
 			$timestamp_cycle = intval($now / $poller_interval) * $poller_interval ;	// Normalise these down to a poller cycle boundary to group them together
-			cacti_tag_log("NEIGHBOR POLLER","process_poller_deltas(): now:$now, before:$before, Hash:".print_r($data[$now],true));
+			cacti_log("process_poller_deltas(): now:$now, before:$before, Hash:".print_r($data[$now],true), true, "NEIGHBOR POLLER");
 			db_execute_prepared("INSERT into plugin_neighbor_log values (?,NOW(),?)",array('',"Now:$now, Before:$before, Hash:".print_r($data[$now],true)));
 			foreach ($data[$now] as $key => $record) {
 					
 					db_execute_prepared("INSERT into plugin_neighbor_log values (?,NOW(),?)",array('',"RRD:$rrdFile, data now:".print_r($data[$now][$key],true)));
 					db_execute_prepared("INSERT into plugin_neighbor_log values (?,NOW(),?)",array('',"RRD:$rrdFile, data before:".print_r($data[$now][$key],true)));
 					$delta = sprintf("%.2f",($data[$now][$key]['value'] -  $data[$before][$key]['value']) / $timeDelta);
-					cacti_tag_log("NEIGHBOR POLLER","process_poller_deltas(): RRD: $rrdFile, Key: $key, Delta: $delta");
+					cacti_log("process_poller_deltas(): RRD: $rrdFile, Key: $key, Delta: $delta", true, "NEIGHBOR POLLER");
 					db_execute_prepared("INSERT INTO plugin_neighbor_poller_delta VALUES ('',?,?,?,?,?)",array($rrdFile,$now,$timestamp_cycle,$key,$delta));
 			}
 		}

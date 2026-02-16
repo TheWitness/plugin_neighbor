@@ -196,7 +196,7 @@ if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 	/* Do not process if not enabled */
 	
 	if (read_config_option('neighbor_global_enabled') == '') {
-		echo "Info: Neighbor polling is disabled in the settings.\n";
+		cacti_log("NEIGHBOR: Info: Neighbor polling is disabled in the settings.", true, "NEIGHBOR");
 		exit(0);
 	}
 
@@ -207,11 +207,11 @@ if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 		$start = $seconds + $micro;
 	}
 	if ($mainRun) {
-		print "Processing hosts.\n";
+		debug("NEIGHBOR: Processing hosts.");
 		processHosts();
 	}
 	elseif ($autoDiscoverAll) {
-		print "Auto-discovering all hosts.\n";
+		debug("NEIGHBOR: Auto-discovering all hosts.");
 		autoDiscoverHosts();
 	}
 	else {
@@ -253,7 +253,7 @@ function debug($message)
  */
 function discoverHost($hostId)
 {
-	print "discoverHost runnning with host_id=$hostId";
+	debug("discoverHost runnning with host_id=$hostId");
 	global $debug, $key;
 	
 	$hostRec = db_fetch_assoc_prepared("SELECT * from host where id = ?",array($hostId));
@@ -262,7 +262,7 @@ function discoverHost($hostId)
 		
 		/* set a process lock */
 		debug("Adding process tracking for Key:$key\n");
-		db_execute_prepared('REPLACE INTO plugin_neighbor_processes (pid, taskid, host_id) VALUES (?,?,?)',array($key,0,$hostId));
+		db_execute_prepared('REPLACE INTO plugin_neighbor_processes (pid, taskid) VALUES (?,?)',array($key,0));
 		debug("Checking for CDP...");	
 		if (read_config_option('neighbor_global_discover_cdp') && neighbor_host_discovery_enabled($hostRec[0], 'neighbor_discover_cdp')) {
 		    debug("Discovering CDP neighbors.");
@@ -675,7 +675,7 @@ function discoverIpNeighbors($host)
 	
 	$neighsFound = 0;
 	$totalSearched = 0;
-	//cacti_tag_log("NEIGHBORS:","ipCache:".print_r($myIpCache,1));
+	debug("ipCache:".print_r($myIpCache,1));
 	foreach ($myIpCache as $vrf => $vrfRec) {
 		
 		foreach ($vrfRec as $ipAddress1 => $record1) {
@@ -698,7 +698,7 @@ function discoverIpNeighbors($host)
 						// cacti_tag_log("NEIGHBOR POLLER: vrf=$vrf, ipAddress1= $ipAddress1, ipAddress2= $ipAddress2 - Past correlation check. totalSearched: $totalSearched, neighsFound: $neighsFound");
 						
 						if (ipSubnetCheck($ipAddress1,$record1['ip_netmask'],$ipAddress2,$record2['ip_netmask'])) {
-							cacti_tag_log("NEIGHBOR POLLER:","Match found for ipAddress1= $ipAddress1, ipAddress2= $ipAddress2");
+							cacti_log("Match found for ipAddress1= $ipAddress1, ipAddress2= $ipAddress2", true, "NEIGHBOR POLLER");
 							// Order the arrays from lowest host_id
 							$first = $record1['host_id'] < $record2['host_id'] ? $record1 : $record2;
 							$second = $record1['host_id'] < $record2['host_id'] ? $record2 : $record1;
@@ -727,7 +727,7 @@ function discoverIpNeighbors($host)
 	$neighCount = 0;
 	$hostCache = array();											// Let's cache the findCactiHost output
 	$intCache = array();											// Let's cache the findCactiInterface output
-	cacti_tag_log("NEIGHBORS:","ipNeigbors:".print_r($ipNeighbors,1));
+	debug("ipNeigbors:".print_r($ipNeighbors,1));
 	foreach ($ipNeighbors as $hostKey => $ipNeighbor) {
 		list($myHostId,$neighHostId) = explode(":",$hostKey);
 		
@@ -908,9 +908,7 @@ function autoDiscoverHosts()
 		AND disabled != 'on'
 		AND status != 1");
 
-	if ($verbose) {
-		echo "INFO: Starting Auto-Discovery for '" . sizeof($hosts) . "' Hosts\n";
-	}
+	cacti_log("NEIGHBOR: INFO: Starting Auto-Discovery for '" . sizeof($hosts) . "' Hosts", true, "NEIGHBOR");
 	debug("Starting AutoDiscovery for '" . sizeof($hosts) . "' Hosts");
 
 	$hostsAdded = 0;
@@ -944,9 +942,7 @@ function autoDiscoverHosts()
 		}
 	}
 
-	if ($verbose) {
-		echo "INFO: Auto-Discovery Complete - Added: $hostsAdded, Updated: $hostsUpdated\n";
-	}
+	cacti_log("NEIGHBOR: INFO: Auto-Discovery Complete - Added: $hostsAdded, Updated: $hostsUpdated", true, "NEIGHBOR");
 	debug("AutoDiscovery Complete - Added: $hostsAdded, Updated: $hostsUpdated");
 	db_execute_prepared("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_autodiscovery_lastrun', ?)", array(time()));
 
@@ -964,11 +960,8 @@ function processHosts()
 	global $start, $seed, $verbose, $debug, $dieNow, $config;
 	global $database_hostname, $database_username, $database_password, $database_default, $database_type, $database_port, $database_ssl, $database_ssl_key, $database_ssl_cert, $database_ssl_ca;
 
-	if ($verbose) { echo "INFO: Processing Hosts Begins\n"; }
-	if (!function_exists('pcntl_fork')) {
-		echo "INFO: PCNTL is not available. Using sequential processing.\n";
-	}
-
+	debug("NEIGHBOR: INFO: Processing Hosts Begins");
+	
 	/* All time/dates will be stored in timestamps
 	 * Get Autodiscovery Lastrun Information
 	 */
@@ -982,7 +975,7 @@ function processHosts()
 	/* Do not process collectors are still running */
 	$processes = db_fetch_cell('SELECT count(*) as num_proc FROM plugin_neighbor_processes');
 	if ($processes) {
-		echo "WARNING: Another neighbor process is still running!  Exiting...\n";
+		cacti_log("NEIGHBOR: WARNING: Another neighbor process is still running!  Exiting...", true, "NEIGHBOR");
 		exit(0);
 	}
 	
@@ -1004,7 +997,7 @@ function processHosts()
 	$concurrentProcesses = read_config_option('neighbor_global_poller_processes');
 	$concurrentProcesses = ($concurrentProcesses == '' ? 5 : $concurrentProcesses);
 
-	echo "INFO: Launching Collectors Starting\n";
+	debug("NEIGHBOR: INFO: Launching Collectors Starting");
 	
 	$running_pids = array();
 	
@@ -1043,7 +1036,7 @@ function processHosts()
 							
 							$key = rand();
 							// Only use DB tracking for visual status, not process control
-							db_execute_prepared("INSERT INTO plugin_neighbor_processes (pid, taskid, started, host_id) VALUES (?,?, NOW(),?)", array($key, $seed, $host['host_id']));
+							db_execute_prepared("INSERT INTO plugin_neighbor_processes (pid, taskid, started) VALUES (?,?, NOW())", array($key, $seed));
 							
 							debug("INFO: [Child PID " . getmypid() . "] processing host: '" . $host['description'] . "'");
 							
@@ -1069,7 +1062,7 @@ function processHosts()
 					$processes = db_fetch_cell('SELECT COUNT(*) as num_proc FROM plugin_neighbor_processes');
 					if ($processes < $concurrentProcesses) {
 						$key = rand();
-						db_execute_prepared("INSERT INTO plugin_neighbor_processes (pid, taskid, started,host_id) VALUES (?,?, NOW(),?)",array($key, $seed,$host['host_id']));
+						db_execute_prepared("INSERT INTO plugin_neighbor_processes (pid, taskid, started) VALUES (?,?, NOW())",array($key, $seed));
 						debug("INFO: Launching Background Shell for: '" . $host['description'] . "'");
 						processHost($host['host_id'], $seed, $key);
 						usleep(10000);
@@ -1082,7 +1075,7 @@ function processHosts()
 		}
 	}
 	
-	echo "INFO: All Hosts Launched, waiting for completion\n";
+	debug("NEIGHBOR: INFO: All Hosts Launched, waiting for completion");
 	
 	// Wait for stragglers
 	if (function_exists('pcntl_fork')) {
@@ -1108,9 +1101,9 @@ function processHosts()
 		}
 	}
 	
-	echo "INFO: Process Complete.\n";
+	debug("NEIGHBOR: INFO: Process Complete.");
 	
-	echo "INFO: Updating Last Run Statistics\n";
+	debug("NEIGHBOR: INFO: Updating Last Run Statistics");
 	
 	// Update the last runtimes
 	
@@ -1129,7 +1122,7 @@ function processHosts()
 	//db_execute("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_poller_stats', '" . $cactiStats . "')");
 	/* log to the logfile */
 	cacti_log('NEIGHBOR STATS: ' . $cactiStats, TRUE, 'SYSTEM');
-	echo "INFO: Neighbor Completed, $cactiStats\n";
+	debug("NEIGHBOR: INFO: Neighbor Completed, $cactiStats");
 	/* launch the graph creation process */
 
 }
@@ -1234,13 +1227,5 @@ function convertTimeticks($timeticks)
 		$formatTime = "$intDays Days $intHours:$intMinutes:$intSeconds";
 	}
 	return $formatTime;
-}
-
-function cacti_tag_log($tag="",$message="")
-{
-	$lineArr = explode("\n",$message);
-	foreach ($lineArr as $line) {
-		cacti_log($line,TRUE,$tag);
-	}
 }
 
