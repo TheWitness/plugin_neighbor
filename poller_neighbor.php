@@ -65,7 +65,6 @@ if (function_exists('pcntl_signal')) {
 	$debug	  	= FALSE;
 	$verbose	= FALSE;
 	$forceRun   	= FALSE;
-	$forceDiscovery = FALSE;
 	$mainRun	= FALSE;
 	$autoDiscoverAll = FALSE;
 	$hostId		= '';
@@ -73,9 +72,8 @@ if (function_exists('pcntl_signal')) {
 	$seed	  	= '';
 	$key	    	= '';
 	$dieNow		= '';			# Capture the signal handlers and die cleanly
-	$killed		= 0;
 
-	global $dieNow, $killed;
+	global $dieNow;
 
 	if (sizeof($parms)) {
 		foreach ($parms as $parameter) {
@@ -111,11 +109,6 @@ if (function_exists('pcntl_signal')) {
 			case '-f':
 			case '--force':
 				$forceRun = TRUE;
-				break;
-			
-			case '-fd':
-			case '--force-discovery':
-				$forceDiscovery = TRUE;
 				break;
 			
 			case '-M':
@@ -334,7 +327,6 @@ function discoverCdpNeighbors($host)
 		$neighUptime 	= $record['uptime'];
 		$neighInterface 	= $record['interface'];
 		$neighRecord = findCactiHost($neighHostname);
-		//print_r($neighRecord);
 		$neighHostId = isset($neighRecord[$neighHostname]['id']) ? $neighRecord[$neighHostname]['id'] : "";
 		$neighIntRecord = findCactiInterface($neighHostId,$neighInterface);
 		
@@ -386,7 +378,6 @@ function discoverLldpNeighbors($host)
 {
 	$oidTable = get_neighbor_oid_table();
 	debug("Processing LLDP Neighbors: " . $host['description']);
-	$pollerDeadtimer = read_config_option('neighbor_global_deadtimer') ? (int) read_config_option('neighbor_global_deadtimer')  : 60;
 	$neighCount = 0;
 	$hostId=$host['id'];
 	$lldpTable = neighbor_snmp_walk_and_flatten($host, $oidTable['lldpMibWalk']);
@@ -398,12 +389,9 @@ function discoverLldpNeighbors($host)
 
 		if 	(preg_match('/'.$oidTable['lldpLocPortDesc'].'\.(\d+)/',$oid,$matches)) {
 				$index = isset($matches[1]) ? $matches[1] : '';
-				//debug("Finding Cacti interface for host:$hostId, Interface: $val");
 				$intRec = findCactiInterface($hostId,$val);
 				$snmpIndex = isset($intRec['snmp_index']) ? $intRec['snmp_index'] : $index;
 				$lldpToSnmp[$index] = $snmpIndex;
-				//print "Found: [$index] => $snmpIndex => $val\n";
-				//print_r($lldpToSnmp);
 		}	
 		elseif (preg_match('/'.$oidTable['lldpRemPortDesc'].'\.\d+\.(\d+\.\d+)/',$oid,$matches)) {
                                 list($portIndex,$lldpIndex) = isset($matches[1]) ? explode(".",$matches[1]) : array("","");
@@ -426,10 +414,8 @@ function discoverLldpNeighbors($host)
                 }
 	}
 
-	// print_r($lldpParsed); exit;
 	// Update the Database
 
-	$neighCount = 0;
 	foreach ($lldpParsed as $index => $record) { 
 
 		// Create a unique hash of the neighbor based on the record
@@ -455,7 +441,6 @@ function discoverLldpNeighbors($host)
 		$neighUptime 	= $record['uptime'];
 		$neighInterface 	= $record['interface'];
 		$neighRecord = findCactiHost($neighHostname);
-		//print_r($neighRecord);
 		$neighHostId = isset($neighRecord[$neighHostname]['id']) ? $neighRecord[$neighHostname]['id'] : "";
 		$neighIntRecord = findCactiInterface($neighHostId,$neighInterface);
 		
@@ -521,16 +506,12 @@ function discoverIpNeighbors($host)
 				$ipParsed[$ipAddress]['snmp_id'] = $index;
 				$ipParsed[$ipAddress]['numeric'] = ip2long($ipAddress);		// Store for later comparison in the nested loop
 				$ifTranslate[$index] = $ipAddress;							// We need to be able to translate snmp_index to IP in the VRF section
-				// debug("Found IP: $ipAddress with snmp_index: $index");
-				//print "Found: [$index] => $snmpIndex => $val\n";
-				//print_r($ipToSnmp);
 		}	
 		elseif (preg_match('/'.$oidTable['ifNetmask'].'\.(\d+\.\d+\.\d+\.\d+)/',$oid,$matches)) {
 			
 				$ipAddress = isset($matches[1]) ? $matches[1] : '';
 				$ipParsed[$ipAddress]['address'] = $ipAddress;
 				$ipParsed[$ipAddress]['netmask'] = $val;
-				//debug("Found netmask for $ipAddress = $val");
         }
 		// The VRF tables all appear to be proprietory - here is the MPLS-VPN-MIB where the VRF name is ascii encoded
 		elseif (preg_match('/'.$oidTable['ciscoVrf'].'\.(\d+)\.(.+)/',$oid,$matches)) {
@@ -545,9 +526,7 @@ function discoverIpNeighbors($host)
 				$vrfName = "";
 				foreach ($vrfOctetArray as $chr) { $vrfName.=chr($chr); }
 				$ipParsed[$ipAddress]['vrf'] = $vrfName;
-				//debug("Found netmask for $ipAddress = $val in vrf $vrfName");
         }
-		//ciscoVrf
 	}
 
 	if (count($ipParsed) > 0) {
@@ -555,7 +534,7 @@ function discoverIpNeighbors($host)
 	} else {
 		debug("Found         0 - IP/Subnet Entries");
 	}
-	// exit;
+
 	// Update the Database
 
 	// First update the ipv4 cache table
@@ -580,10 +559,6 @@ function discoverIpNeighbors($host)
 						VALUES (?,?,?,?,?,?,NOW())",
 						array($myHostId, $myHostname,$snmpId, $ipAddress, $ipSubnet, $vrf)
 		);
-		
-		// Clean out older entries
-		// db_execute_prepared("DELETE FROM plugin_neighbor_ipv4_cache where host_id = ? and last_seen < DATE_SUB(NOW(), INTERVAL ? SECOND)",array($myHostId, $pollerDeadtimer));
-		
 	}
 	
 	// Now get all the ipv4_cache entries back to work out the neighbor relationships
@@ -640,7 +615,6 @@ function discoverIpNeighbors($host)
 							$firstInterface = findCactiInterface($firstHost,'',$firstSnmpId);
 							$secondInterface = findCactiInterface($secondHost,'',$secondSnmpId);
 							
-							// Make a unique neighbor entry using a concat string of host_id and snmp_id as keys
 							$ipNeighbors["$firstHost:$secondHost"]["$firstSnmpId:$secondSnmpId"] = array( 'first' => $first, 'second' => $second);
 							$neighsFound++;
 						}
@@ -653,8 +627,8 @@ function discoverIpNeighbors($host)
 	debug(sprintf("Found   %7d - IP Neighbors (%.2f sec, %d comparisons)",$neighsFound, $time_end-$time_start, $totalSearched));
 	
 	$neighCount = 0;
-	$hostCache = array();											// Let's cache the findCactiHost output
-	$intCache = array();											// Let's cache the findCactiInterface output
+	$hostCache = array();
+	$intCache = array();
 	
 	foreach ($ipNeighbors as $hostKey => $ipNeighbor) {
 		list($myHostId,$neighHostId) = explode(":",$hostKey);
@@ -807,19 +781,9 @@ function findCactiInterface($hostId,$interface, $snmpIndex = null)
 
 }
 
-
-
-function getSnmpCache($hostId)
-{
-	$cacheRecords = db_fetch_assoc_prepared("SELECT * from host_snmp_cache where host_id = ?",array($hostId));
-	$sorted = db_fetch_hash($cacheRecords,array('snmp_index','field_name'));
-	return($sorted);
-}
-
-
 function autoDiscoverHosts()
 {
-	global $debug, $verbose;
+	global $debug;
 
 	$hosts = db_fetch_assoc("SELECT *
 		FROM host
@@ -831,7 +795,6 @@ function autoDiscoverHosts()
 	debug("Starting AutoDiscovery for '" . sizeof($hosts) . "' Hosts");
 
 	$hostsAdded = 0;
-	$hostsSkipped = 0;
 	$hostsUpdated = 0;
 
 	if (sizeof($hosts)) {
@@ -877,19 +840,11 @@ function autoDiscoverHosts()
 function processHosts()
 {
 	global $start, $seed, $verbose, $debug, $dieNow, $config;
-	global $database_hostname, $database_username, $database_password, $database_default, $database_type, $database_port, $database_ssl, $database_ssl_key, $database_ssl_cert, $database_ssl_ca;
+	global $database_hostname, $database_username, $database_password, $database_default, $database_type, $database_port;
 
 	debug(str_repeat('-', 85));
 	debug('NEIGHBOR POLLER - Processing Hosts');
 	debug(str_repeat('-', 85));
-	
-	/* All time/dates will be stored in timestamps
-	 * Get Autodiscovery Lastrun Information
-	 */
-	$autoDiscoveryLastrun = read_config_option('plugin_neighbor_last_run');
-	/* Get Collection Frequencies (in seconds) */
-	$autoDiscoveryFreq    = read_config_option('neighbor_autodiscovery_freq');
-	/* Set the booleans based upon current times */
 	
 	/* Purge collectors that run longer than 10 minutes */
 	db_execute('DELETE FROM plugin_neighbor_processes WHERE (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(started)) > ' . NEIGHBOR_PROCESS_TIMEOUT);
@@ -1037,8 +992,6 @@ function processHosts()
 	list($micro, $seconds) = explode(' ', microtime());
 	$end	 = $seconds + $micro;
 	$cactiStats = sprintf('time:%01.4f ' . 'processes:%s ' . 'hosts:%s', round($end - $start, 2), $concurrentProcesses, sizeof($hosts));
-	/* log to the database */
-	//db_execute("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_poller_stats', '" . $cactiStats . "')");
 	/* log to the logfile */
 	cacti_log('NEIGHBOR STATS: ' . $cactiStats, TRUE, 'SYSTEM');
 	debug(str_repeat('-', 85));
@@ -1081,10 +1034,9 @@ function displayVersion()
  */
 function displayHelp()
 {
-	// displayVersion();
 	echo "\nNeighbor discovery plugin for Cacti.\n\n";
 	echo "Usage: \n";
-	echo "Master process      : poller_neighbor.php [-M] [-f] [-fd] [-d]\n";
+	echo "Master process      : poller_neighbor.php [-M] [-f] [-d]\n";
 	echo "Auto-discover hosts : poller_neighbor.php [-A|--auto-discover-all] [-d]\n";
 	echo "Child process       : poller_neighbor.php --host-id=N [--seed=N] [-f] [-d]\n\n";
 	echo "Options:\n";
@@ -1092,7 +1044,6 @@ function displayHelp()
 	echo "  -A, --auto-discover-all  Add all eligible hosts to neighbor discovery\n";
 	echo "  --host-id=N           Poll specific host by ID\n";
 	echo "  -f, --force           Force polling regardless of schedule\n";
-	echo "  -fd, --force-discovery  Force discovery\n";
 	echo "  -d, --debug           Enable debug output\n";
 	echo "  --verbose             Enable verbose output\n";
 	echo "  -v, -V, --version     Display version information\n";
@@ -1143,27 +1094,5 @@ function sigHandler($signo)
              break;
          default:							// handle all other signals
      }
-}
-
-/**
- * Convert SNMP timeticks to human-readable format
- * 
- * @param int $timeticks SNMP timeticks value (1/100th of a second)
- * @return string Formatted time string (e.g., "5 Days 12:34:56")
- */
-function convertTimeticks($timeticks)
-{
-	if($timeticks<=0){
-		$formatTime = "0 Days, 00:00:00";
-	}
-	else {
-		$seconds = sprintf("%02d",intval($timeticks / 1000));
-		$intDays = sprintf("%02d",intval($seconds / 86400));
-		$intHours = sprintf("%02d",intval(($seconds - ($intDays * 86400)) / 3600));
-		$intMinutes = sprintf("%02d",intval(($seconds - ($intDays * 86400) - ($intHours * 3600)) / 60));
-		$intSeconds = sprintf("%02d",intval(($seconds - ($intDays * 86400) - ($intHours * 3600) - ($intMinutes * 60))));
-		$formatTime = "$intDays Days $intHours:$intMinutes:$intSeconds";
-	}
-	return $formatTime;
 }
 
