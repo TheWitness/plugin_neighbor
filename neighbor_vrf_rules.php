@@ -854,7 +854,7 @@ function get_neighbor_vrf_rules_filter() {
 	?>
 	<tr class='even'>
 		<td>
-			<form id='form_automation' action='neighbor_rules.php'>
+			<form id='form_automation' action='neighbor_vrf_rules.php'>
 				<table class='filterTable'>
 					<tr>
 						<td>
@@ -1663,7 +1663,6 @@ function neighbor_display_vrf_object_matches($rule, $url) {
 			$sql_query = neighbor_build_vrf_data_query_sql($rule);
 		}
 		
-		print "neighbor_display_vrf_object_matches() sql_query: $sql_query";
 		$start_rec = $rows*(get_request_var('page')-1);
 		$all_neighbor_objects = db_fetch_assoc($sql_query);
 		$total_rows = count((array) $all_neighbor_objects);
@@ -1673,7 +1672,7 @@ function neighbor_display_vrf_object_matches($rule, $url) {
 		//pre_print_r($neighbor_objects,"OINK $sql_query:");
 		// Get heading text
 		
-		$nav = html_nav_bar('neighbor_rules.php?action=edit&id=' . $rule['id'], MAX_DISPLAY_PAGES, get_request_var('page'), $rows, $total_rows, 30, __('Matching Objects'), 'page', 'main');
+		$nav = html_nav_bar('neighbor_vrf_rules.php?action=edit&id=' . $rule['id'], MAX_DISPLAY_PAGES, get_request_var('page'), $rows, $total_rows, 30, __('Matching Objects'), 'page', 'main');
 		print $nav;
 
 		$display_text = array();
@@ -1685,7 +1684,7 @@ function neighbor_display_vrf_object_matches($rule, $url) {
 		}
 		//pre_print_r($display_text,"Display:");
 
-		html_header_sort($display_text,$sort_column,$sort_direction,'',$config['url_path']."plugins/neighbor/neighbor_rules.php?action=edit&id=$rule_id");
+		html_header_sort($display_text,$sort_column,$sort_direction,'',$config['url_path']."plugins/neighbor/neighbor_vrf_rules.php?action=edit&id=$rule_id");
 		//html_header($display_text);
 
 		if (!count((array) $neighbor_objects)) {
