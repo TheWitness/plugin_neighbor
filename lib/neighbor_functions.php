@@ -1285,13 +1285,17 @@ function pre_print_r($arr,$tag = '',$print = true) {
 # ------------------------------------------------------------
 # Automation Rules
 # ------------------------------------------------------------
+/* Note: Form field arrays reference Cacti automation variables that are only 
+ * available in web context. Skip definition when called from CLI/poller.
+ */
+if (!isset($_SERVER['argv']) || php_sapi_name() !== 'cli') {
 /* file: automation_graph_rules.php, automation_tree_rules.php, action: edit */
 $fields_neighbor_match_rule_item_edit = array(
 	'operation' => array(
 		'method' => 'drop_array',
 		'friendly_name' => __('Operation'),
 		'description' => __('Logical operation to combine rules.'),
-		'array' => $automation_oper,
+		'array' => isset($automation_oper) ? $automation_oper : array(),
 		'value' => '|arg1:operation|',
 		'on_change' => 'toggle_operation()',
 	),
@@ -1333,7 +1337,7 @@ $fields_neighbor_graph_rule_item_edit = array(
 		'method' => 'drop_array',
 		'friendly_name' => __('Operation'),
 		'description' => __('Logical operation to combine rules.'),
-		'array' => $automation_oper,
+		'array' => isset($automation_oper) ? $automation_oper : array(),
 		'value' => '|arg1:operation|',
 		'on_change' => 'toggle_operation()',
 	),
@@ -1349,7 +1353,7 @@ $fields_neighbor_graph_rule_item_edit = array(
 		'method' => 'drop_array',
 		'friendly_name' => __('Operator'),
 		'description' => __('Operator.'),
-		'array' => $automation_op_array['display'],
+		'array' => (isset($automation_op_array) && isset($automation_op_array['display'])) ? $automation_op_array['display'] : array(),
 		'value' => '|arg1:operator|',
 		'on_change' => 'toggle_operator()',
 	),
@@ -1442,13 +1446,13 @@ $fields_neighbor_tree_rules_edit1 = array(
 		'description' => __('The Item Type that shall be dynamically added to the tree.'),
 		'value' => '|arg1:leaf_type|',
 		'on_change' => 'applyItemTypeChange()',
-		'array' => $automation_tree_item_types
+		'array' => isset($automation_tree_item_types) ? $automation_tree_item_types : array()
 	),
 	'host_grouping_type' => array(
 		'method' => 'drop_array',
 		'friendly_name' => __('Graph Grouping Style'),
 		'description' => __('Choose how graphs are grouped when drawn for this particular host on the tree.'),
-		'array' => $host_group_types,
+		'array' => isset($host_group_types) ? $host_group_types : array(),
 		'value' => '|arg1:host_grouping_type|',
 		'default' => HOST_GROUPING_GRAPH_TEMPLATE,
 	)
@@ -1482,7 +1486,7 @@ $fields_neighbor_tree_rule_item_edit = array(
 		'description' => __('Choose an Object to build a new Sub-header.'),
 		'array' => array(),			# later to be filled dynamically
 		'value' => '|arg1:field|',
-		'none_value' => $automation_tree_header_types[AUTOMATION_TREE_ITEM_TYPE_STRING],
+		'none_value' => (isset($automation_tree_header_types) && defined('AUTOMATION_TREE_ITEM_TYPE_STRING')) ? $automation_tree_header_types[AUTOMATION_TREE_ITEM_TYPE_STRING] : __('None'),
 		'on_change' => 'applyHeaderChange()',
 	),
 	'sort_type' => array(
@@ -1491,7 +1495,7 @@ $fields_neighbor_tree_rule_item_edit = array(
 		'description' => __('Choose how items in this tree will be sorted.'),
 		'value' => '|arg1:sort_type|',
 		'default' => TREE_ORDERING_NONE,
-		'array' => $tree_sort_types,
+		'array' => isset($tree_sort_types) ? $tree_sort_types : array(),
 		),
 	'propagate_changes' => array(
 		'method' => 'checkbox',
@@ -1524,6 +1528,8 @@ $fields_neighbor_tree_rule_item_edit = array(
 		'value' => '|arg1:sequence|',
 	)
 );
+
+} // End of CLI guard for form field arrays
 
 $neighbor_interface_new_graph_fields = array(
 	'type'		=> 'Type',
