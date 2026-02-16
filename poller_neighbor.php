@@ -220,8 +220,8 @@ if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 	
 	exit(0);
 
-function runCollector($start, $lastrun, $frequency) {
-
+function runCollector($start, $lastrun, $frequency)
+{
 	global $forceRun, $dieNow;
 
 	if ((empty($lastrun) || ($start - $lastrun) > $frequency) && $frequency > 0 || $forceRun) {
@@ -235,7 +235,8 @@ function runCollector($start, $lastrun, $frequency) {
 	}
 }
 
-function debug($message) {
+function debug($message)
+{
 	global $debug;
 	if ($debug) {
 		echo 'DEBUG: ' . trim($message) . "\n";
@@ -244,9 +245,14 @@ function debug($message) {
 }
 
 // neighbor_host_discovery_enabled() function is now in lib/neighbor_sql_tables.php
-
-function discoverHost($hostId) {
-
+/**
+ * Discovers neighbors for a specific host.
+ *
+ * @param int $hostId The ID of the host to discover.
+ * @return bool True if discovery was successful, false otherwise.
+ */
+function discoverHost($hostId)
+{
 	print "discoverHost runnning with host_id=$hostId";
 	global $debug, $key;
 	
@@ -271,17 +277,23 @@ function discoverHost($hostId) {
 		    $lldpNeighbors = discoverIpNeighbors($hostRec[0]);
 		}
 		
-		//$statsJson = json_encode($stats);
+		// $statsJson = json_encode($stats);
 		/* remove the process lock */
 		db_execute_prepared('DELETE FROM plugin_neighbor_processes WHERE pid=?', array($key));
-		//db_execute('INSERT INTO plugin__neighbor__stats ()');
+		
 		db_execute("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_last_run', '" . time() . "')");
 		return true;
 	}
 }
 
-function discoverCdpNeighbors($host) {
-
+/**
+ * Discovers CDP neighbors for a given host.
+ *
+ * @param array $host Host array from database.
+ * @return int Number of neighbors found.
+ */
+function discoverCdpNeighbors($host)
+{
 	debug("-------------------------------------\nCDP Neighbor discovery for host:".$host['description']);
 	global $oidTable;
 	$cdpMib = array();
@@ -410,14 +422,18 @@ function discoverCdpNeighbors($host) {
 				    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,DATE_SUB(NOW(),INTERVAL ? SECOND),NOW(),?,?)",
 				    array_merge($hashArray,array($neighUptime,$neighHash,$recordHash))
 		)) { $neighCount++;}
-
 	}
 	return($neighCount);
 }
 
-
-function discoverLldpNeighbors($host) {
-
+/**
+ * Discovers LLDP neighbors for a given host.
+ *
+ * @param array $host Host array from database.
+ * @return int Number of neighbors found.
+ */
+function discoverLldpNeighbors($host)
+{
 	global $oidTable;
 	debug("LLDP Neighbor discovery for host:".$host['description']);
 	$pollerDeadtimer = read_config_option('neighbor_global_deadtimer') ? (int) read_config_option('neighbor_global_deadtimer')  : 60;
@@ -474,7 +490,7 @@ function discoverLldpNeighbors($host) {
                                 list($portIndex,$lldpIndex) = isset($matches[1]) ? explode(".",$matches[1]) : array("","");
 				$snmpIndex = isset($lldpToSnmp[$portIndex]) ? $lldpToSnmp[$portIndex] : "";
                                 $lldpParsed["$snmpIndex.$lldpIndex"]['version'] = $val;
-                                $lldpParsed["$snmpIndex.$lldpIndex"]['platform'] = strtok($val, "\n");			// The first line of lldpRemSysDesc is closest to platform inc CDP
+                                $lldpParsed["$snmpIndex.$lldpIndex"]['platform'] = (is_string($val) ? strtok($val, "\n") : '');			// The first line of lldpRemSysDesc is closest to platform inc CDP
                 }
 	}
 
@@ -546,14 +562,18 @@ function discoverLldpNeighbors($host) {
 				    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,DATE_SUB(NOW(),INTERVAL ? SECOND),?,?)",
 				    array_merge($hashArray,array($neighUptime,$neighHash,$recordHash))
 		)) { $neighCount++;}
-
 	}
 	return($neighCount);
-
 }
 
-function discoverIpNeighbors($host) {
-
+/**
+ * Discovers IP neighbors for a given host by correlating subnets.
+ *
+ * @param array $host Host array from database.
+ * @return void
+ */
+function discoverIpNeighbors($host)
+{
 	global $oidTable;
 	debug("IP Neighbor discovery for host:".$host['description']);
 	$pollerDeadtimer = read_config_option('neighbor_global_deadtimer') ? (int) read_config_option('neighbor_global_deadtimer')  : 60;
@@ -752,31 +772,22 @@ function discoverIpNeighbors($host) {
 		}
 		
 	}
-	
-	//print_r($ipNeighbors);
-	//exit;	
+	$time_end = microtime(true);
 }
-
-
-
-
-
 
 // Check if two IP / Netmask combinations are in the same subnet
+function ipSubnetCheck($ip1, $net1, $ip2, $net2)
+{
+	$ip_ip1 = ip2long($ip1);
+	$ip_ip2 = ip2long($ip2);
+	$ip_net1 = ip2long($net1);
+	$ip_net2 = ip2long($net2);
 
-function ipSubnetCheck ($ip1,$net1,$ip2,$net2) {
+	$ip_ip1_net = $ip_ip1 & $ip_net1;
+	$ip_ip2_net = $ip_ip2 & $ip_net2;
 
-    $ip_ip1 = ip2long ($ip1);
-    $ip_ip2 = ip2long ($ip2);
-    $ip_net1 = ip2long ($net1);
-    $ip_net2 = ip2long ($net2);
-
-    $ip_ip1_net = $ip_ip1 & $ip_net1;
-    $ip_ip2_net = $ip_ip2 & $ip_net2;
-
-    return ($ip_ip1_net == $ip_ip2_net);
+	return ($ip_ip1_net == $ip_ip2_net);
 }
-
 
 // Fetch the contents of the ipv4 cache
 function getIpv4Cache($hostId = null) {
@@ -793,7 +804,8 @@ function getIpv4Cache($hostId = null) {
 	}
 }
 
-function sortByOid($mib) {
+function sortByOid($mib)
+{
 	$table = array();
 	foreach ($mib as $tab) { 
 		foreach ($tab as $i => $rec) {
@@ -801,23 +813,22 @@ function sortByOid($mib) {
 			$value = isset($rec['value']) ? $rec['value'] : "";
 			$table[$oid] = $value;
 		}
+
 	}
 	return($table);
 }
 
-
-function inferIntSpeed($interface) {
-
+function inferIntSpeed($interface)
+{
 	if (preg_match('/^Fa/',$interface)) 	{ return(100); }
 	if (preg_match('/^Gi/',$interface)) 	{ return(1000); }
 	if (preg_match('/^Te/',$interface)) 	{ return(10000); }
 	if (preg_match('/^Fo/',$interface)) 	{ return(40000); }
 	if (preg_match('/^One/',$interface)) 	{ return(100000); }
-
 }
 
-function findCactiHost($hostName = null, $hostId = null) { 
-
+function findCactiHost($hostName = null, $hostId = null)
+{
 	$strippedHost = preg_replace('/\..+/','',$hostName);
 	$sorted = array();
 	$hostRecords = "";
@@ -834,8 +845,8 @@ function findCactiHost($hostName = null, $hostId = null) {
 
 }
 
-function getCactiHostById($hostId) { 
-
+function getCactiHostById($hostId)
+{
 	if ($hostRecords = db_fetch_assoc_prepared("SELECT * from host where id = ?",array($hostId))) {
 		if (isset($hostRecords[0])) {
 			return($hostRecords[0]);
@@ -850,8 +861,8 @@ function getCactiHostById($hostId) {
 
 # Find an interface in the host_snmp_cache given a host ID and interface
 
-function findCactiInterface($hostId,$interface, $snmpIndex = null) { 
-
+function findCactiInterface($hostId,$interface, $snmpIndex = null)
+{
 	if (!$snmpIndex) { 
 		$snmpIndex = db_fetch_cell_prepared("SELECT snmp_index from host_snmp_cache where host_id = ? AND field_name = 'ifDescr' and field_value = ?",array($hostId,$interface));
 	}
@@ -879,15 +890,16 @@ function findCactiInterface($hostId,$interface, $snmpIndex = null) {
 
 
 
-function getSnmpCache($hostId) { 
-
+function getSnmpCache($hostId)
+{
 	$cacheRecords = db_fetch_assoc_prepared("SELECT * from host_snmp_cache where host_id = ?",array($hostId));
 	$sorted = db_fetch_hash($cacheRecords,array('snmp_index','field_name'));
 	return($sorted);
 }
 
 
-function autoDiscoverHosts() {
+function autoDiscoverHosts()
+{
 	global $debug, $verbose;
 
 	$hosts = db_fetch_assoc("SELECT *
@@ -941,9 +953,14 @@ function autoDiscoverHosts() {
 	return true;
 }
 
-
-function processHosts() {
-
+/**
+ * Main polling process manager.
+ * Launches child processes for each host.
+ *
+ * @return void
+ */
+function processHosts()
+{
 	global $start, $seed, $verbose, $debug, $dieNow;
 	
 	if ($verbose) { echo "INFO: Processing Hosts Begins\n"; }
@@ -1045,16 +1062,14 @@ function processHosts() {
 
 }
 
-
-
-
 function processHost($hostId, $seed, $key) {
+	global $debug, $config, $forceRun, $dieNow, $start;
 	
-	global $config, $debug, $start, $forceRun, $dieNow;
 	if ($dieNow) { return(false); }
 	
 	//print 'php /plugins/neighbor/poller_neighbor.php '.' --host-id=' . $hostId . ' --start=' . $start . ' --seed=' . $seed . ' --key=' . $key . ($forceRun ? ' --force' : '') . ($debug ? ' --debug' : '');
-	
+ 
+
 	exec_background(read_config_option('path_php_binary'), ' '
 			. $config['base_path'] . '/plugins/neighbor/poller_neighbor.php' 
 			. ' --host-id=' . $hostId . ' --start=' . $start . ' --seed=' . $seed . ' --key=' . $key . ($forceRun ? ' --force' : '') . ($debug ? ' --debug' : ''));
@@ -1064,7 +1079,8 @@ function processHost($hostId, $seed, $key) {
 
 
 
-function displayVersion() {
+function displayVersion()
+{
 	global $config;
 	if (!function_exists('plugin_neighbor_version')) {
 		include_once($config['base_path'] . '/plugins/neighbor/setup.php');
@@ -1074,7 +1090,8 @@ function displayVersion() {
 	echo "Neighbor Plugin - Poller Process, Version " . $info['version'] . ", " . COPYRIGHT_YEARS . "\n";
 }
 
-function displayHelp() {
+function displayHelp()
+{
 	// displayVersion();
 	echo "\nNeighbor discovery plugin for Cacti.\n\n";
 	echo "Usage: \n";
@@ -1093,8 +1110,8 @@ function displayHelp() {
 	echo "  -h, -H, --help        Display this help message\n\n";
 }
 
-function exitCleanly() {
-
+function exitCleanly()
+{
 	print "Cleaning processes table...";
 	if (db_execute("DELETE FROM plugin_neighbor_processes")) {
 		print "[OK]\n";	
@@ -1106,8 +1123,8 @@ function exitCleanly() {
 }
 
 // Handle Ctrl-C a bit more gracefully
-function sigHandler($signo) {
-
+function sigHandler($signo)
+{
 	global $dieNow;
 	print "Handling signal!\n";
      	switch ($signo) {
@@ -1131,8 +1148,8 @@ function sigHandler($signo) {
 
 
 
-function convertTimeticks($timeticks) {
-
+function convertTimeticks($timeticks)
+{
 	if($timeticks<=0){
 		$formatTime = "0 Days, 00:00:00";
 	}
@@ -1147,12 +1164,11 @@ function convertTimeticks($timeticks) {
 	return $formatTime;
 }
 
-function cacti_tag_log($tag="",$message="") {
+function cacti_tag_log($tag="",$message="")
+{
 	$lineArr = explode("\n",$message);
 	foreach ($lineArr as $line) {
 		cacti_log($line,TRUE,$tag);
 	}
 }
 
-
-?>
