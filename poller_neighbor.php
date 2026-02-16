@@ -73,40 +73,6 @@ if (function_exists('pcntl_signal')) {
 
 	global $dieNow, $killed;
 
-	$oidTable	= array(
-
-		// CISCO-CDP-MIB
-
-		'cdpMibWalk'		=> array('1.3.6.1.4.1.9.9.23.1.2.1.1'),
-		'cdpCacheIfIndex'	=> '1.3.6.1.4.1.9.9.23.1.2.1.1.1',
-		'cdpCacheVersion'	=> '1.3.6.1.4.1.9.9.23.1.2.1.1.5',
-		'cdpCacheDeviceId'	=> '1.3.6.1.4.1.9.9.23.1.2.1.1.6',
-		'cdpCacheDevicePort'	=> '1.3.6.1.4.1.9.9.23.1.2.1.1.7',
-		'cdpCachePlatform'	=> '1.3.6.1.4.1.9.9.23.1.2.1.1.8',
-		'cdpCacheDuplex'	=> '1.3.6.1.4.1.9.9.23.1.2.1.1.12',
-		'cdpCacheUptime'	=> '1.3.6.1.4.1.9.9.23.1.2.1.1.24',
-
-	
-		// LLDP-MIB
-
-		'lldpMibWalk'		=> array('1.0.8802.1.1.2.1.3.7.1.4','1.0.8802.1.1.2.1.4.1','.1.0.8802.1.1.2.1.4.2'),
-		'lldpLocPortDesc'	=> '1.0.8802.1.1.2.1.3.7.1.4',
-		'lldpRemPortId'		=> '1.0.8802.1.1.2.1.4.1.1.7',
-		'lldpRemPortDesc'	=> '1.0.8802.1.1.2.1.4.1.1.8',
-		'lldpRemSysName'	=> '1.0.8802.1.1.2.1.4.1.1.9',
-		'lldpRemSysDesc'	=> '1.0.8802.1.1.2.1.4.1.1.10',
-		'lldpRemManAddrIfId'	=> '1.0.8802.1.1.2.1.4.2.1.4',
-		
-		
-		// IP-MIB
-		'ipMibWalk'	=> array('1.3.6.1.2.1.4.20.1','1.3.6.1.3.118.1.2.1'),
-		'ipIpAddr'	=> '1.3.6.1.2.1.4.20.1.2',
-		'ifNetmask'	=> '1.3.6.1.2.1.4.20.1.3',
-		'ciscoVrf'	=> '1.3.6.1.3.118.1.2.1.1'
-		
-	);
-	
-	
 	if (sizeof($parms)) {
 		foreach ($parms as $parameter) {
 			if (strpos($parameter, '=')) {
@@ -298,27 +264,8 @@ function discoverHost($hostId)
 function discoverCdpNeighbors($host)
 {
 	debug("Processing CDP Neighbors: " . $host['description']);
-	global $oidTable;
-	$cdpMib = array();
-	foreach ($oidTable['cdpMibWalk'] as $oid) { 
-
-		$results = plugin_cacti_snmp_walk($host['hostname'], $host['snmp_community'],
-                				$oid, $host['snmp_version'], $host['snmp_username'], 
-                                                $host['snmp_password'], $host['snmp_auth_protocol'], $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'], 
-                                                $host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'], read_config_option('snmp_retries'), $host['max_oids']);
-		array_push($cdpMib,$results);
-        }
-
-	// Step through the table and pull out the info we need
-
-	$cdpTable = array();		// Lets flip this back into an array keyed by oid
-	foreach ($cdpMib as $cdp) { 
-		foreach ($cdp as $i => $rec) {
-			$oid = isset($rec['oid']) ? $rec['oid'] : "";
-			$value = isset($rec['value']) ? $rec['value'] : "";
-			$cdpTable[$oid] = $value;
-		}
-	}
+	$oidTable = get_neighbor_oid_table();
+	$cdpTable = neighbor_snmp_walk_and_flatten($host, $oidTable['cdpMibWalk']);
 
 	$cdpParsed = array();
 	foreach ($cdpTable as $oid => $val) { 
@@ -437,30 +384,11 @@ function discoverCdpNeighbors($host)
  */
 function discoverLldpNeighbors($host)
 {
-	global $oidTable;
+	$oidTable = get_neighbor_oid_table();
 	debug("Processing LLDP Neighbors: " . $host['description']);
 	$pollerDeadtimer = read_config_option('neighbor_global_deadtimer') ? (int) read_config_option('neighbor_global_deadtimer')  : 60;
 	$hostId=$host['id'];
-	$lldpMib = array();
-	foreach ($oidTable['lldpMibWalk'] as $oid) { 
-		$results = plugin_cacti_snmp_walk($host['hostname'], $host['snmp_community'],
-                				$oid, $host['snmp_version'], $host['snmp_username'], 
-                                                $host['snmp_password'], $host['snmp_auth_protocol'], $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'], 
-                                                $host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'], read_config_option('snmp_retries'), $host['max_oids']);
-		array_push($lldpMib,$results);
-        }
-
-	// Step through the table and pull out the info we need
-	// Lets flip this back into an array keyed by oid
-	
-	$lldpTable = array();							
-	foreach ($lldpMib as $lldp) { 
-		foreach ($lldp as $i => $rec) {
-			$oid = isset($rec['oid']) ? $rec['oid'] : "";
-			$value = isset($rec['value']) ? $rec['value'] : "";
-			$lldpTable[$oid] = $value;
-		}
-	}
+	$lldpTable = neighbor_snmp_walk_and_flatten($host, $oidTable['lldpMibWalk']);
 
 
 	$lldpParsed = array();
@@ -577,21 +505,12 @@ function discoverLldpNeighbors($host)
  */
 function discoverIpNeighbors($host)
 {
-	global $oidTable;
+	$oidTable = get_neighbor_oid_table();
 	debug("Processing IP Neighbors: " . $host['description']);
 	$pollerDeadtimer = read_config_option('neighbor_global_deadtimer') ? (int) read_config_option('neighbor_global_deadtimer')  : 60;
 	$hostId=$host['id'];
 	$myHostname	= isset($host['description']) ? $host['description'] : "";
-	$ipMib = array();
-	foreach ($oidTable['ipMibWalk'] as $oid) { 
-		$results = plugin_cacti_snmp_walk($host['hostname'], $host['snmp_community'],
-                				$oid, $host['snmp_version'], $host['snmp_username'], 
-                                $host['snmp_password'], $host['snmp_auth_protocol'], $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'], 
-                                $host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'], read_config_option('snmp_retries'), $host['max_oids']);
-					array_push($ipMib,$results);
-        }
-	
-	$ipTable = sortByOid($ipMib);
+	$ipTable = neighbor_snmp_walk_and_flatten($host, $oidTable['ipMibWalk']);
 	
 	$ipParsed = array();
 	$ifTranslate = array();
@@ -812,20 +731,6 @@ function getIpv4Cache($hostId = null) {
 		$result = db_fetch_hash($query,array('vrf','ip_address'));
 		return ($result);
 	}
-}
-
-function sortByOid($mib)
-{
-	$table = array();
-	foreach ($mib as $tab) { 
-		foreach ($tab as $i => $rec) {
-			$oid = isset($rec['oid']) ? $rec['oid'] : "";
-			$value = isset($rec['value']) ? $rec['value'] : "";
-			$table[$oid] = $value;
-		}
-
-	}
-	return($table);
 }
 
 function inferIntSpeed($interface)

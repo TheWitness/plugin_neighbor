@@ -183,3 +183,75 @@ function db_fetch_hash(& $result,$index_keys) {
 	return($assoc);
 }
 
+/**
+ * Get the SNMP OID table for neighbor discovery protocols
+ *
+ * Returns an associative array of OID definitions for CDP, LLDP, and IP MIBs
+ * used during neighbor discovery polling.
+ *
+ * @return array The OID table keyed by protocol field name
+ */
+function get_neighbor_oid_table() {
+	return array(
+		// CISCO-CDP-MIB
+		'cdpMibWalk'        => array('1.3.6.1.4.1.9.9.23.1.2.1.1'),
+		'cdpCacheIfIndex'   => '1.3.6.1.4.1.9.9.23.1.2.1.1.1',
+		'cdpCacheVersion'   => '1.3.6.1.4.1.9.9.23.1.2.1.1.5',
+		'cdpCacheDeviceId'  => '1.3.6.1.4.1.9.9.23.1.2.1.1.6',
+		'cdpCacheDevicePort'=> '1.3.6.1.4.1.9.9.23.1.2.1.1.7',
+		'cdpCachePlatform'  => '1.3.6.1.4.1.9.9.23.1.2.1.1.8',
+		'cdpCacheDuplex'    => '1.3.6.1.4.1.9.9.23.1.2.1.1.12',
+		'cdpCacheUptime'    => '1.3.6.1.4.1.9.9.23.1.2.1.1.24',
+
+		// LLDP-MIB
+		'lldpMibWalk'       => array('1.0.8802.1.1.2.1.3.7.1.4','1.0.8802.1.1.2.1.4.1','.1.0.8802.1.1.2.1.4.2'),
+		'lldpLocPortDesc'   => '1.0.8802.1.1.2.1.3.7.1.4',
+		'lldpRemPortId'     => '1.0.8802.1.1.2.1.4.1.1.7',
+		'lldpRemPortDesc'   => '1.0.8802.1.1.2.1.4.1.1.8',
+		'lldpRemSysName'    => '1.0.8802.1.1.2.1.4.1.1.9',
+		'lldpRemSysDesc'    => '1.0.8802.1.1.2.1.4.1.1.10',
+		'lldpRemManAddrIfId'=> '1.0.8802.1.1.2.1.4.2.1.4',
+
+		// IP-MIB
+		'ipMibWalk' => array('1.3.6.1.2.1.4.20.1','1.3.6.1.3.118.1.2.1'),
+		'ipIpAddr'  => '1.3.6.1.2.1.4.20.1.2',
+		'ifNetmask' => '1.3.6.1.2.1.4.20.1.3',
+		'ciscoVrf'  => '1.3.6.1.3.118.1.2.1.1',
+	);
+}
+
+/**
+ * Perform SNMP walks for given OIDs and flatten results into a keyed array
+ *
+ * Walks multiple OID trees on a host and returns a single associative array
+ * keyed by full OID with the corresponding SNMP value.
+ *
+ * @param array $host Host array from database with SNMP credentials
+ * @param array $walkOids Array of base OIDs to walk
+ * @return array Associative array of OID => value pairs
+ */
+function neighbor_snmp_walk_and_flatten($host, $walkOids) {
+	$results = array();
+
+	foreach ($walkOids as $oid) {
+		$walked = plugin_cacti_snmp_walk(
+			$host['hostname'], $host['snmp_community'],
+			$oid, $host['snmp_version'], $host['snmp_username'],
+			$host['snmp_password'], $host['snmp_auth_protocol'],
+			$host['snmp_priv_passphrase'], $host['snmp_priv_protocol'],
+			$host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'],
+			read_config_option('snmp_retries'), $host['max_oids']
+		);
+
+		foreach ($walked as $rec) {
+			$oidKey = isset($rec['oid']) ? $rec['oid'] : '';
+			$value  = isset($rec['value']) ? $rec['value'] : '';
+			if ($oidKey !== '') {
+				$results[$oidKey] = $value;
+			}
+		}
+	}
+
+	return $results;
+}
+
