@@ -27,6 +27,9 @@ function get_edge_rra() {
 	
 	$rrd_array = [];
 	$rows = db_fetch_assoc("SELECT rrd_file from plugin_neighbor_edge");
+	if (!is_array($rows)) {
+		return $rrd_array;
+	}
 	foreach ($rows as $row) {
 		$rrd = isset($row['rrd_file']) ? $row['rrd_file'] : "";
 		if ($rrd) {
@@ -89,8 +92,14 @@ function process_poller_deltas() {
 
 	db_execute_prepared("INSERT into plugin_neighbor_log values (?,NOW(),?)",array('','process_poller_deltas() is starting.'));
 	$results = db_fetch_assoc("SELECT * from plugin_neighbor_poller_output");
+	if (!is_array($results)) {
+		return;
+	}
 	//db_execute_prepared("INSERT into plugin_neighbor_log values (?,NOW(),?)",array('','process_poller_deltas() has run db_fetch_assoc'));
 	$hash = db_fetch_hash($results,array('rrd_file','timestamp','key_name'));
+	if (!is_array($hash)) {
+		return;
+	}
 	//db_execute_prepared("INSERT into plugin_neighbor_log values (?,NOW(),?)",array('','process_poller_deltas() has run db_fetch_hash'));
 
 		
