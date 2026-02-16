@@ -358,9 +358,9 @@ function neighbor_show_tab() {
 
 	if (api_user_realm_auth('neighbor.php')) {
 		if (substr_count($_SERVER['REQUEST_URI'], 'neighbor.php')) {
-			print '<a href="' . $config['url_path'] . 'plugins/neighbor/neighbor.php"><img src="' . $config['url_path'] . 'plugins/neighbor/images/tab_neighbor_down.gif" alt="neighbor"></a>';
+			print '<a href="' . $config['url_path'] . 'plugins/neighbor/neighbor.php"><img src="' . $config['url_path'] . 'plugins/neighbor/img/tab_neighbor_down.gif" alt="neighbor"></a>';
 		}else{
-			print '<a href="' . $config['url_path'] . 'plugins/neighbor/neighbor.php"><img src="' . $config['url_path'] . 'plugins/neighbor/images/tab_neighbor.gif" alt="neighbor"></a>';
+			print '<a href="' . $config['url_path'] . 'plugins/neighbor/neighbor.php"><img src="' . $config['url_path'] . 'plugins/neighbor/img/tab_neighbor.gif" alt="neighbor"></a>';
 		}
 	}
 }
