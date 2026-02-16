@@ -2017,6 +2017,7 @@ function neighbor_build_data_query_sql($rule,$host_filter,$edge_filter) {
 	$query_where = sizeof($sql_where_combined) ? "WHERE ".implode(" AND ",$sql_where_combined) : "";
 	/* build magic query, for matching hosts JOIN tables host and host_template */
 	$sql_query .= " FROM host as h
+		LEFT JOIN host_template AS ht ON (h.host_template_id=ht.id)
 		$table_join_list
 	    $query_where
 	";
