@@ -1844,6 +1844,14 @@ function project_nodes($nodes,$res_x,$res_y,$rotate_degrees = 0, $flip_x = 0, $f
 	$map_width = $res_x - ($padding *2);		// Put in 50px padding on both sides
 	$map_height = $res_y - ($padding *2);		// Put in 50px padding on both sides
 	
+	// Prevent division by zero when all nodes have same coordinates
+	if ($max_x <= 0) {
+		$max_x = 1;
+	}
+	if ($max_y <= 0) {
+		$max_y = 1;
+	}
+	
 	$map_width_ratio = $map_width / $max_x;
 	$map_height_ratio = $map_height / $max_y;
 	
