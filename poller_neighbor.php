@@ -192,17 +192,15 @@ function runCollector($start, $lastrun, $frequency)
 
 function debug($message)
 {
-	global $debug;
-	
-	// Format timestamp
-	$timestamp = date('H:i:s');
-	
-	if ($debug) {
-		// Clean terminal output with timestamp and consistent prefix
-		echo $timestamp . ' NEIGHBOR DEBUG: ' . trim($message) . "\n";
-	}
-	// Also log to file for non-debug runs
-	cacti_log('NEIGHBOR DEBUG: ' . trim($message), FALSE, 'NEIGHBOR');
+    global $debug;
+    // Format timestamp
+    $timestamp = date('H:i:s');
+
+    if ($debug) {
+        // Clean terminal output with timestamp and consistent prefix
+        echo $timestamp . ' NEIGHBOR DEBUG: ' . trim($message) . "\n";
+        cacti_log('NEIGHBOR DEBUG: ' . trim($message), FALSE, 'NEIGHBOR');
+    }
 }
 
 // neighbor_host_discovery_enabled() function is now in lib/neighbor_sql_tables.php
