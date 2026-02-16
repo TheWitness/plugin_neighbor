@@ -28,10 +28,8 @@ include_once('include/auth.php');
 include_once('include/global.php');
 include_once('plugins/neighbor/lib/neighbor_functions.php');
 
-error_log("ACTION:".get_request_var('action'));
 switch (get_request_var('action')) {
 	case 'ajax_interface_map':
-		error_log("Calling ajax_interface_map()...");
 		header('Content-Type: application/json');
 		ajax_interface_nodes();
 		break;
@@ -84,7 +82,7 @@ function ajax_map_reset_options($format = 'jsonp',$ajax = true) {
 	
 	$user_id = isset_request_var('user_id') ? get_request_var('user_id') : false;
 	$rule_id = isset_request_var('rule_id') ? get_request_var('rule_id') : false;
-	error_log(print_r($_REQUEST,true));
+	// error_log(print_r($_REQUEST,true));
 	$message = "";
 	if ($user_id && $rule_id) { 
 		db_execute_prepared("DELETE from plugin_neighbor_user_map where user_id=? AND rule_id=?", array($user_id,$rule_id));
@@ -116,11 +114,11 @@ function ajax_map_save_options($format = 'jsonp',$ajax = true) {
 	$rule_id = isset_request_var('rule_id') ? get_request_var('rule_id') : false;
 	
 	$message = "";
-	error_log("ajax_map_save_options() is saving for user: $user_id, rule: $rule_id");
+	// error_log("ajax_map_save_options() is saving for user: $user_id, rule: $rule_id");
 	
 	if ($user_id && $rule_id) { 
 	
-		error_log("Request".print_r($_REQUEST,true));
+		// error_log("Request".print_r($_REQUEST,true));
 	
 		$mapItems 	= isset_request_var('items') 	? get_request_var('items') 		: [];
 		$seed 		= isset_request_var('seed')		? get_request_var('seed') 		: 0;
@@ -175,6 +173,14 @@ function ajax_map_save_options($format = 'jsonp',$ajax = true) {
 }
 
 function ajax_neighbors_fetch($table = '', $format = 'jsonp',$ajax = true) {
+	
+	// SEC-01: Whitelist table names to prevent SQL injection
+	$allowed = ['xdp', 'ipv4', 'ifalias'];
+	if (!in_array($table, $allowed, true)) {
+		header('Content-Type: application/json');
+		print json_encode(array('error' => 'Invalid table'));
+		return;
+	}
 	
 	$format = $format ? $format  : (isset_request_var('format') ? get_request_var('format') : '');
 	$query_callback = get_request_var('callback', 'Callback');

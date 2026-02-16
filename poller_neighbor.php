@@ -33,28 +33,21 @@ if (!isset($_SERVER['argv'][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($
 
 declare(ticks = 1);
 ini_set('max_execution_time', '0');
-error_log("\n\nRunning poller_neighbor with args:".print_r($_SERVER['argv'],1));
-error_log("DIR: ".dirname(__FILE__));
 $dir = dirname(__FILE__);
 chdir($dir);
 include_once (dirname(__FILE__) . '/../../include/global.php');
-error_log("Globals done OK!");
 
 // For some reason, including global breaks if you've changed directory first. No idea.
 
 $dir = dirname(__FILE__);
 chdir($dir);
-error_log("Changed to file dir:".getcwd());
 if (strpos($dir, 'plugins') !== false) { chdir('../../'); }
-error_log("Changed to root dir:".getcwd());
 include_once('lib/snmp.php');
 include_once('lib/ping.php');
 include_once('lib/poller.php');
 include_once('lib/data_query.php');
 include_once('plugins/neighbor/lib/neighbor_functions.php');
 include_once('plugins/neighbor/lib/neighbor_sql_tables.php');
-
-error_log("Includes done OK!");
 
 if (function_exists('pcntl_signal')) {				// Set up signal handling if available
 	pcntl_signal(SIGINT, "sigHandler");
@@ -281,7 +274,7 @@ function discoverHost($hostId)
 		/* remove the process lock */
 		db_execute_prepared('DELETE FROM plugin_neighbor_processes WHERE pid=?', array($key));
 		
-		db_execute("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_last_run', '" . time() . "')");
+		db_execute_prepared("REPLACE INTO settings (name,value) VALUES (?, ?)", array('plugin_neighbor_last_run', time()));
 		return true;
 	}
 }
@@ -1112,7 +1105,7 @@ function processHosts()
 
 	/* set the collector statistics */
 	if (runCollector($start, $lastRun, $pollerFrequency)) {
-		db_execute("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_last_run', '$start')");
+		db_execute_prepared("REPLACE INTO settings (name,value) VALUES (?, ?)", array('plugin_neighbor_last_run', $start));
 	}
 	
 	list($micro, $seconds) = explode(' ', microtime());

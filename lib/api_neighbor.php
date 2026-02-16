@@ -912,7 +912,6 @@ function neighbor_display_new_graphs($rule, $url) {
 		$sql_having         = '';
 		$neighbor_objects = array();
 
-		//error_log("RULE:".print_r($rule,1));
 		$sql_order = "";
 		
 		$rule_options = isset($rule['neighbor_options']) ? $rule['neighbor_options'] : '';
@@ -940,10 +939,7 @@ function neighbor_display_new_graphs($rule, $url) {
 		$all_neighbor_objects = dedup_by_hash($all_neighbor_objects);
 		$total_rows = count((array) $all_neighbor_objects);
 		$neighbor_objects = array_slice($all_neighbor_objects,$start_rec,$rows);
-		//error_log(print_r($neighbor_objects,1));
 		
-		//error_log("Query: $sql_query");
-		//pre_print_r($neighbor_objects,"OINK $sql_query:");
 		// Get heading text
 		
 		$nav = html_nav_bar('neighbor_rules.php?action=edit&id=' . $rule['id'], MAX_DISPLAY_PAGES, get_request_var('page'), $rows, $total_rows, 30, __('Matching Objects'), 'page', 'main');
@@ -1128,10 +1124,7 @@ function ajax_interface_nodes($rule_id = '', $ajax = true, $format = 'jsonp') {
 	$edge_data = get_edges_poller($rule_id);
 	$seen = [];
 	$interface_data_template_id = get_data_template("Interface - Traffic");
-	error_log("Found data template id: $interface_data_template_id");
 	$interface_graph_template_id = get_graph_template("Interface - Traffic (bits/sec)");
-	error_log("Found graph template id: $interface_graph_template_id");
-	error_log("Neighbor Objects:");
 	foreach ($neighbor_objects as $h1 => $rec1) {
 		foreach ($rec1 as $h2 => $rec2 ) {
 			foreach ($rec2 as $interface => $rec3) {
@@ -1157,7 +1150,6 @@ function ajax_interface_nodes($rule_id = '', $ajax = true, $format = 'jsonp') {
 				
 				$graph_local_id = get_interface_graph_local($from,$rec3['snmp_id'],$interface_graph_template_id);
 				$rec3['graph_local_id'] = $graph_local_id;
-				// error_log(print_r($rec3,1));
 				
 				$poller_json = isset($edge_data[$from][$to][$rrd_file]) ? $edge_data[$from][$to][$rrd_file] : "{}";
 				// Store the edge
@@ -1177,7 +1169,6 @@ function ajax_interface_nodes($rule_id = '', $ajax = true, $format = 'jsonp') {
 			}
 		}
  	}
-	// error_log("Edges:".print_r($edges,true));
 	// We need to store the edges into a DB so we can integrate the poller_output values, RRD files etc. etc.
 	update_edges_db($rule_id,$edges);
 
@@ -1206,8 +1197,6 @@ function ajax_interface_nodes($rule_id = '', $ajax = true, $format = 'jsonp') {
 // Update the plugin_neighbor_edge table
 
 function update_edges_db($rule_id,$edges) {
-	error_log("update_edges_db() is running.");
-	//error_log("Edges is:".print_r($edges,1));
 	db_execute_prepared("DELETE FROM plugin_neighbor_edge where rule_id = ? and edge_updated < DATE_SUB(NOW(), INTERVAL 1 DAY)",array(1));
 	foreach ($edges as $edge) {
 		$edge_json = json_encode($edge);
@@ -1230,8 +1219,6 @@ function get_edges_poller($rule_id) {
 
 
 function get_interface_graph_local($host_id,$snmp_id,$graph_template_id) {
-
-	error_log("get_interface_graph_local() called: $host_id,$snmp_id,$graph_template_id");
 
 	$graph_local_id = db_fetch_cell_prepared("SELECT graph_templates_graph.local_graph_id as id
 											 FROM (graph_local,graph_templates_graph)
@@ -1413,7 +1400,6 @@ function get_site_coords($host_arr = array()) {
 			$sql_query.= " WHERE h.id IN (".implode(",",$host_arr).")";				// For very large installations it may be better to pass an array of hosts to filter by
 		}
 	}
-	error_log("get_site_coords(): $sql_query");
 	$results = db_fetch_assoc($sql_query);
 	$sites = db_fetch_hash($results,array('id'));
 	return($sites);	
@@ -1463,7 +1449,7 @@ function dedup_by_hash($neighbor_objects) {
 	$dedup = array();
 	$neighbor_objects = is_array($neighbor_objects) ? $neighbor_objects : array();
 	
-	error_log("Objects is:".sizeof($neighbor_objects)." records.");
+	// error_log("Objects is:".sizeof($neighbor_objects)." records.");
 	foreach ($neighbor_objects as $rec) {
 		$neighbor_hash = isset($rec['neighbor_hash']) ? $rec['neighbor_hash'] : "";
 		$neighbor_type = isset($rec['type']) ? $rec['type'] : "";
@@ -1472,7 +1458,7 @@ function dedup_by_hash($neighbor_objects) {
 		$seen[$neighbor_hash]=1;
 		$dedup[] = $rec;
 	}
-	error_log("Dedup is now:".sizeof($dedup)." records.");
+	// error_log("Dedup is now:".sizeof($dedup)." records.");
 	return($dedup);
 }
 

@@ -36,7 +36,6 @@ $neighbor_rules_actions = array(
 
 /* set default action */
 set_default_action();
-error_log("ACTION:".get_request_var('action'));
 switch (get_request_var('action')) {
 	case 'save':
 		save_vrf_rule();
@@ -83,7 +82,7 @@ switch (get_request_var('action')) {
 		bottom_footer();
 		break;
 	case 'ajax_interface_map':
-		error_log("Calling ajax_interface_map()...");
+		// error_log("Calling ajax_interface_map()...");
 		header('Content-Type: application/json');
 		ajax_interface_nodes();
 		break;
@@ -103,7 +102,6 @@ function save_vrf_rule() {
 		/* ================= input validation ================= */
 		get_filter_request_var('id');
 		/* ==================================================== */
-		error_log("Saving Neighbor Rule...");
 		$save['id'] = get_nfilter_request_var('id');
 		$save['name'] = form_input_validate(get_nfilter_request_var('name'), 'name', '', false, 3);
 		$save['description'] = form_input_validate(get_nfilter_request_var('description'), 'description', '', false, 3);
@@ -113,23 +111,18 @@ function save_vrf_rule() {
 			$save['enabled'] = (isset_request_var('enabled') ? 'on' : '');
 		}
 		
-		error_log("save_vrf_rule(): SAVE is=".print_r($save,1));
 		if (!is_error_message()) {
-			error_log("SQL Saving..");
 			$rule_id = sql_save($save, 'plugin_neighbor_vrf_rules');
 			if ($rule_id) 	{ raise_message(1); }
 			else 			{ raise_message(2); }
 		}
 		else {
 			global $messages;
-			error_log("Validation errors\nDEBUG Sessions:".print_r($_SESSION,1));
-			
 		}
 
 		header('Location: neighbor_vrf_rules.php?header=false&action=edit&id=' . (empty($rule_id) ? get_nfilter_request_var('id') : $rule_id));
 	}
 	elseif (isset_request_var('save_component_neighbor_vrf_rule_item')) {
-		error_log("Saving record with request: save_component_neighbor_vrf_rule_item");
 		/* ================= input validation ================= */
 		get_filter_request_var('id');
 		get_filter_request_var('item_id');
@@ -145,13 +138,9 @@ function save_vrf_rule() {
 		$save['pattern']   = form_input_validate((isset_request_var('pattern') ? get_nfilter_request_var('pattern') : ''), 'pattern', '', true, 3);
 
 		if (!is_error_message()) {
-			error_log("Saving record with save:".print_r($save,1));
 			$item_id = sql_save($save, 'plugin_neighbor_vrf_rule_items');
 			if ($item_id) 	{ raise_message(1); }
 			else 			{ raise_message(2); }
-		}
-		else {
-			error_log("Form validation error encountered, not saving...");
 		}
 
 		if (is_error_message()) {
@@ -623,8 +612,6 @@ function neighbor_vrf_rules_edit() {
 				'size' => '64'
 			);
 				
-			error_log('$fields_neighbor_vrf_rules_edit1:'.print_r($fields_neighbor_vrf_rules_edit1,1));
-			error_log('$fields_neighbor_vrf_rules_edit2:'.print_r($fields_neighbor_vrf_rules_edit2,1));
 			$form_array = $fields_neighbor_vrf_rules_edit1 + $fields_neighbor_vrf_rules_edit2;
 			/* display whole rule */
 		} else {

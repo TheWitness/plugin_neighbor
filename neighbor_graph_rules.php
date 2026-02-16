@@ -102,7 +102,6 @@ function save() {
 		$save['neighbor_options'] = form_input_validate(get_nfilter_request_var('neighbor_options'), 'neighbor_options', '', false, 3);
 		$save['graph_type_id'] = (isset_request_var('graph_type_id')) ? form_input_validate(get_nfilter_request_var('graph_type_id'), 'graph_type_id', '^[0-9]+$', false, 3) : 0;
 		$save['enabled'] = (isset_request_var('enabled') ? 'on' : '');
-		error_log("Save is:".print_r($save,true));
 		
 		if (!is_error_message()) {
 			$rule_id = sql_save($save, 'plugin_neighbor_graph_rules');

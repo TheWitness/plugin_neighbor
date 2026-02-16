@@ -38,7 +38,6 @@ $neighbor_rules_actions = array(
 
 /* set default action */
 set_default_action();
-error_log("ACTION:".get_request_var('action'));
 switch (get_request_var('action')) {
 	case 'save':
 		save_rule();
@@ -85,7 +84,7 @@ switch (get_request_var('action')) {
 		bottom_footer();
 		break;
 	case 'ajax_interface_map':
-		error_log("Calling ajax_interface_map()...");
+
 		header('Content-Type: application/json');
 		ajax_interface_nodes();
 		break;
@@ -105,7 +104,6 @@ function save_rule() {
 		/* ================= input validation ================= */
 		get_filter_request_var('id');
 		/* ==================================================== */
-		error_log("Saving Neighbor Rule...");
 		$save['id'] = get_nfilter_request_var('id');
 		$save['name'] = form_input_validate(get_nfilter_request_var('name'), 'name', '', false, 3);
 		$save['description'] = form_input_validate(get_nfilter_request_var('description'), 'description', '', false, 3);
@@ -116,17 +114,13 @@ function save_rule() {
 			$save['enabled'] = (isset_request_var('enabled') ? 'on' : '');
 		}
 		
-		error_log("save_rule(): SAVE is=".print_r($save,1));
 		if (!is_error_message()) {
-			error_log("SQL Saving..");
 			$rule_id = sql_save($save, 'plugin_neighbor_rules');
 			if ($rule_id) 	{ raise_message(1); }
 			else 			{ raise_message(2); }
 		}
 		else {
 			global $messages;
-			error_log("Validation errors\nDEBUG Sessions:".print_r($_SESSION,1));
-			
 		}
 
 		header('Location: neighbor_rules.php?header=false&action=edit&id=' . (empty($rule_id) ? get_nfilter_request_var('id') : $rule_id));
