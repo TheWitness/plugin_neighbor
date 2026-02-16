@@ -200,11 +200,10 @@ if (function_exists('pcntl_signal')) {
 		$start = $seconds + $micro;
 	}
 	if ($mainRun) {
-		debug("NEIGHBOR: Processing hosts.");
 		processHosts();
 	}
 	elseif ($autoDiscoverAll) {
-		debug("NEIGHBOR: Auto-discovering all hosts.");
+		debug('Auto-discovering all hosts...');
 		autoDiscoverHosts();
 	}
 	else {
@@ -231,10 +230,16 @@ function runCollector($start, $lastrun, $frequency)
 function debug($message)
 {
 	global $debug;
+	
+	// Format timestamp
+	$timestamp = date('H:i:s');
+	
 	if ($debug) {
-		echo 'DEBUG: ' . trim($message) . "\n";
-		cacti_log('NEIGHBOR:' . trim($message),TRUE,'NEIGHBOR');
+		// Clean terminal output with timestamp and consistent prefix
+		echo $timestamp . ' NEIGHBOR DEBUG: ' . trim($message) . "\n";
 	}
+	// Also log to file for non-debug runs
+	cacti_log('NEIGHBOR DEBUG: ' . trim($message), FALSE, 'NEIGHBOR');
 }
 
 // neighbor_host_discovery_enabled() function is now in lib/neighbor_sql_tables.php
@@ -246,28 +251,33 @@ function debug($message)
  */
 function discoverHost($hostId)
 {
-	debug("discoverHost runnning with host_id=$hostId");
 	global $debug, $key;
 	
 	$hostRec = db_fetch_assoc_prepared("SELECT * from host where id = ?",array($hostId));
 	if (isset($hostRec[0])) { 
-		debug(sprintf("Starting Discovery for host:%s [%d]\n",$hostRec[0]['description'],$hostId));
+		debug(str_repeat('-', 85));
+		debug(sprintf("Starting Discovery: %s [ID=%d]",$hostRec[0]['description'],$hostId));
+		debug(str_repeat('-', 85));
 		
 		/* set a process lock */
-		debug("Adding process tracking for Key:$key\n");
+		if ($key) {
+			debug("Process Lock ID: $key");
+		}
 		db_execute_prepared('REPLACE INTO plugin_neighbor_processes (pid, taskid) VALUES (?,?)',array($key,0));
-		debug("Checking for CDP...");	
+		debug(str_repeat('-', 85));
+		
 		if (read_config_option('neighbor_global_discover_cdp') && neighbor_host_discovery_enabled($hostRec[0], 'neighbor_discover_cdp')) {
-		    debug("Discovering CDP neighbors.");
 		    $cdpNeighbors = discoverCdpNeighbors($hostRec[0]);
+			debug(sprintf("Found   %7d - CDP Neighbor(s)",$cdpNeighbors));
 		}
-		debug("Checking for LLDP...");	
+		
 		if (read_config_option('neighbor_global_discover_lldp') && neighbor_host_discovery_enabled($hostRec[0], 'neighbor_discover_lldp')) {
-		    debug("Discovering LLDP neighbors.");
 		    $lldpNeighbors = discoverLldpNeighbors($hostRec[0]);
+			debug(sprintf("Found   %7d - LLDP Neighbor(s)",$lldpNeighbors));
 		}
+		
 		if (read_config_option('neighbor_global_discover_ip') && neighbor_host_discovery_enabled($hostRec[0], 'neighbor_discover_ip')) {
-		    $lldpNeighbors = discoverIpNeighbors($hostRec[0]);
+		    discoverIpNeighbors($hostRec[0]);
 		}
 		
 		// $statsJson = json_encode($stats);
@@ -287,7 +297,7 @@ function discoverHost($hostId)
  */
 function discoverCdpNeighbors($host)
 {
-	debug("-------------------------------------\nCDP Neighbor discovery for host:".$host['description']);
+	debug("Processing CDP Neighbors: " . $host['description']);
 	global $oidTable;
 	$cdpMib = array();
 	foreach ($oidTable['cdpMibWalk'] as $oid) { 
@@ -428,7 +438,7 @@ function discoverCdpNeighbors($host)
 function discoverLldpNeighbors($host)
 {
 	global $oidTable;
-	debug("LLDP Neighbor discovery for host:".$host['description']);
+	debug("Processing LLDP Neighbors: " . $host['description']);
 	$pollerDeadtimer = read_config_option('neighbor_global_deadtimer') ? (int) read_config_option('neighbor_global_deadtimer')  : 60;
 	$hostId=$host['id'];
 	$lldpMib = array();
@@ -568,7 +578,7 @@ function discoverLldpNeighbors($host)
 function discoverIpNeighbors($host)
 {
 	global $oidTable;
-	debug("IP Neighbor discovery for host:".$host['description']);
+	debug("Processing IP Neighbors: " . $host['description']);
 	$pollerDeadtimer = read_config_option('neighbor_global_deadtimer') ? (int) read_config_option('neighbor_global_deadtimer')  : 60;
 	$hostId=$host['id'];
 	$myHostname	= isset($host['description']) ? $host['description'] : "";
@@ -623,7 +633,11 @@ function discoverIpNeighbors($host)
 		//ciscoVrf
 	}
 
-	debug(print_r($ipParsed,1));
+	if (count($ipParsed) > 0) {
+		debug(sprintf("Found   %7d - IP/Subnet Entries", count($ipParsed)));
+	} else {
+		debug("Found         0 - IP/Subnet Entries");
+	}
 	// exit;
 	// Update the Database
 
@@ -642,13 +656,12 @@ function discoverIpNeighbors($host)
 			$vrf = isset($vrfMapping[$myHostId][$ipAddress]['vrf']) && ($vrfMapping[$myHostId][$ipAddress]['vrf']) ? $vrfMapping[$myHostId][$ipAddress]['vrf'] : "";		
 		}
 		
-		debug("ipSubnet: $ipSubnet, VRF: $vrf");
 		if ($ipSubnet == '255.255.255.255') { continue;} 					// No loopbacks
 		
 		db_execute_prepared("REPLACE  INTO `plugin_neighbor_ipv4_cache` 
-								(`host_id`, `hostname`,`snmp_id`,`ip_address`,`ip_netmask`,`vrf`,`last_seen`)
-								VALUES (?,?,?,?,?,?,NOW())",
-								array($myHostId, $myHostname,$snmpId, $ipAddress, $ipSubnet, $vrf)
+						(`host_id`, `hostname`,`snmp_id`,`ip_address`,`ip_netmask`,`vrf`,`last_seen`)
+						VALUES (?,?,?,?,?,?,NOW())",
+						array($myHostId, $myHostname,$snmpId, $ipAddress, $ipSubnet, $vrf)
 		);
 		
 		// Clean out older entries
@@ -664,11 +677,16 @@ function discoverIpNeighbors($host)
 	$time_start = microtime(true);
 	$confSubnetCorrelation = read_config_option('neighbor_global_subnet_correlation') ? (int) read_config_option('neighbor_global_subnet_correlation') : 30;
 	$minCorrelation = ip2long(long2ip(0xffffffff << (32 - $confSubnetCorrelation)));		// This looks silly but gets around the 32/64 bit inconsistency...
-	debug("Subnet correlation is set to /$confSubnetCorrelation which is $minCorrelation (".long2ip($minCorrelation).")");
 	
 	$neighsFound = 0;
 	$totalSearched = 0;
-	debug("ipCache:".print_r($myIpCache,1));
+	
+	// Summarize IP cache
+	$cacheCount = 0;
+	foreach ($myIpCache as $vrf => $vrfData) {
+		$cacheCount += count($vrfData);
+	}
+	debug(sprintf("Found   %7d - IP Cache Entries (Subnet: /%d)", $cacheCount, $confSubnetCorrelation));
 	foreach ($myIpCache as $vrf => $vrfRec) {
 		
 		foreach ($vrfRec as $ipAddress1 => $record1) {
@@ -715,12 +733,12 @@ function discoverIpNeighbors($host)
 		}
 	}
 	$time_end = microtime(true);
-	debug(sprintf("IP subnet matching of %d records to %d neighbors took %.2f seconds.\n",$totalSearched, $neighsFound, $time_end-$time_start));
+	debug(sprintf("Found   %7d - IP Neighbors (%.2f sec, %d comparisons)",$neighsFound, $time_end-$time_start, $totalSearched));
 	
 	$neighCount = 0;
 	$hostCache = array();											// Let's cache the findCactiHost output
 	$intCache = array();											// Let's cache the findCactiInterface output
-	debug("ipNeigbors:".print_r($ipNeighbors,1));
+	
 	foreach ($ipNeighbors as $hostKey => $ipNeighbor) {
 		list($myHostId,$neighHostId) = explode(":",$hostKey);
 		
@@ -742,7 +760,6 @@ function discoverIpNeighbors($host)
 								$neighHostId,$hostCache[$neighHostId]['description'],$neighSnmpId,
 								$intCache[$neighHostId][$neighSnmpId]['ifDescr'], $intCache[$neighHostId][$neighSnmpId]['ifAlias'],
 								$record['second']['ip_address'], $record['second']['ip_netmask'],$intCache[$neighHostId][$neighSnmpId]['ifHwAddr']);
-			debug("hashArray:".print_r($hashArray,1));
 			
 			$neighArray = array($record['first']['vrf'],$hostKey,$record['first']['ip_address'],$record['second']['ip_address']);
 			$hostArray = array($hostCache[$myHostId]['description'],$hostCache[$neighHostId]['description']);
@@ -953,7 +970,9 @@ function processHosts()
 	global $start, $seed, $verbose, $debug, $dieNow, $config;
 	global $database_hostname, $database_username, $database_password, $database_default, $database_type, $database_port, $database_ssl, $database_ssl_key, $database_ssl_cert, $database_ssl_ca;
 
-	debug("NEIGHBOR: INFO: Processing Hosts Begins");
+	debug(str_repeat('-', 85));
+	debug('NEIGHBOR POLLER - Processing Hosts');
+	debug(str_repeat('-', 85));
 	
 	/* All time/dates will be stored in timestamps
 	 * Get Autodiscovery Lastrun Information
@@ -990,7 +1009,8 @@ function processHosts()
 	$concurrentProcesses = read_config_option('neighbor_global_poller_processes');
 	$concurrentProcesses = ($concurrentProcesses == '' ? 5 : $concurrentProcesses);
 
-	debug("NEIGHBOR: INFO: Launching Collectors Starting");
+	debug(sprintf("Found   %7d - Host(s) to Process", count($hosts)));
+	debug(str_repeat('-', 85));
 	
 	$running_pids = array();
 	
@@ -1031,8 +1051,6 @@ function processHosts()
 							// Only use DB tracking for visual status, not process control
 							db_execute_prepared("INSERT INTO plugin_neighbor_processes (pid, taskid, started) VALUES (?,?, NOW())", array($key, $seed));
 							
-							debug("INFO: [Child PID " . getmypid() . "] processing host: '" . $host['description'] . "'");
-							
 							// Run the actual work
 							discoverHost($host['host_id']);
 							
@@ -1068,7 +1086,7 @@ function processHosts()
 		}
 	}
 	
-	debug("NEIGHBOR: INFO: All Hosts Launched, waiting for completion");
+	debug(str_repeat('-', 85));
 	
 	// Wait for stragglers
 	if (function_exists('pcntl_fork')) {
@@ -1094,9 +1112,8 @@ function processHosts()
 		}
 	}
 	
-	debug("NEIGHBOR: INFO: Process Complete.");
-	
-	debug("NEIGHBOR: INFO: Updating Last Run Statistics");
+	debug('All Collector Processes Complete');
+	debug(str_repeat('-', 85));
 	
 	// Update the last runtimes
 	
@@ -1115,7 +1132,9 @@ function processHosts()
 	//db_execute("REPLACE INTO settings (name,value) VALUES ('plugin_neighbor_poller_stats', '" . $cactiStats . "')");
 	/* log to the logfile */
 	cacti_log('NEIGHBOR STATS: ' . $cactiStats, TRUE, 'SYSTEM');
-	debug("NEIGHBOR: INFO: Neighbor Completed, $cactiStats");
+	debug(str_repeat('-', 85));
+	debug('NEIGHBOR POLLER COMPLETE: ' . $cactiStats);
+	debug(str_repeat('-', 85));
 	/* launch the graph creation process */
 
 }
