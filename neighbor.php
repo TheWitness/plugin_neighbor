@@ -54,7 +54,7 @@ switch(get_request_var('action')) {
 		render_neighbor_page('display_neighbors');
 		break;
 	case 'xdp':
-		render_neighbor_page('show_xdp_neighbors');
+		render_neighbor_page('display_neighbors');
 		break;
 	case 'neighbor_routing':
 		render_neighbor_page('display_routing_neighbors');
