@@ -23,7 +23,6 @@
  +-------------------------------------------------------------------------+
 */
 
-
 $guest_account = true;
 
 chdir('../../');
@@ -33,7 +32,7 @@ include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_functions.ph
 /**
  * Render a neighbor page with standard header/footer wrapper
  * 
- * @param callable $callback Function to call for page content
+ * @param  callable $callback Function to call for page content
  * @return void
  */
 function render_neighbor_page($callback) {
@@ -49,34 +48,41 @@ switch(get_request_var('action')) {
 	case 'neighbor_map':
 	case 'maps':
 		render_neighbor_page('display_interface_map');
+
 		break;
 	case 'neighbor_interface':
 		render_neighbor_page('display_neighbors');
+
 		break;
 	case 'xdp':
 		render_neighbor_page('display_neighbors');
+
 		break;
 	case 'neighbor_routing':
 		render_neighbor_page('display_routing_neighbors');
+
 		break;
 	case 'ajax_hosts':
 	case 'ajax_hosts_noany':
 		get_allowed_ajax_hosts(true, false, 'h.id IN (SELECT host_id FROM plugin_neighbor_xdp)');
+
 		break;
 	case 'hoststat':
 		render_neighbor_page('hosts');
+
 		break;
 	default:
 		render_neighbor_page('display_interface_map');
+
 		break;
 }
 
 // Clear the Nav Cache, so that it doesn't know we came from Thold
 $_SESSION['sess_nav_level_cache'] = '';
 
-////
-// CDP & LLDP Neighbors 
-////
+// //
+// CDP & LLDP Neighbors
+// //
 
 /**
  * Display neighbor interface listing page
@@ -87,17 +93,19 @@ $_SESSION['sess_nav_level_cache'] = '';
  * @return void Outputs HTML and JavaScript includes
  */
 function display_neighbors() {
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	$neighbor_type = 'xdp';
+
 	if (isset_request_var('neighbor_type')) {
-		$type = get_filter_request_var('neighbor_type', FILTER_CALLBACK, array('options' => 'sanitize_search_string'));
-		$allowed_types = array('xdp', 'ipv4', 'ifalias');
+		$type          = get_filter_request_var('neighbor_type', FILTER_CALLBACK, ['options' => 'sanitize_search_string']);
+		$allowed_types = ['xdp', 'ipv4', 'ifalias'];
+
 		if (in_array($type, $allowed_types, true)) {
 			$neighbor_type = $type;
 		}
 	}
-	/* ==================================================== */
-	
+	// ====================================================
+
 	print "<div id='neighbor_toolbar'></div>\n";
 	print "<div id='xdp_neighbors_holder'></div>\n";
 	print "<form>\n";
@@ -117,7 +125,7 @@ function display_neighbors() {
  */
 function display_routing_neighbors() {
 	html_start_box(__('Routing Protocol Neighbors', 'neighbor'), '100%', '', '3', 'center', '');
-	
+
 	print '<tr><td>';
 	print '<div style="padding: 20px; text-align: center;">';
 	print '<h3>' . __('Routing Protocol Neighbor Discovery', 'neighbor') . '</h3>';
@@ -130,7 +138,7 @@ function display_routing_neighbors() {
 	print '<p><em>' . __('Note: Routing protocol discovery must be enabled in Settings and configured on your devices.', 'neighbor') . '</em></p>';
 	print '</div>';
 	print '</td></tr>';
-	
+
 	html_end_box();
 }
 
@@ -144,53 +152,49 @@ function display_routing_neighbors() {
  * @return void Outputs HTML summary table
  */
 function neighbor_summary() {
-	/* ================= input validation ================= */
-	$filters = array(
-		'rows' => array(
-			'filter' => FILTER_VALIDATE_INT,
+	// ================= input validation =================
+	$filters = [
+		'rows' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'default' => '-1'
-		),
-		'sort_column' => array(
-			'filter' => FILTER_CALLBACK,
+		],
+		'sort_column' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'method',
-			'options' => array('options' => 'sanitize_search_string')
-		),
-		'sort_direction' => array(
-			'filter' => FILTER_CALLBACK,
+			'options' => ['options' => 'sanitize_search_string']
+		],
+		'sort_direction' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'ASC',
-			'options' => array('options' => 'sanitize_search_string')
-		)
-	);
+			'options' => ['options' => 'sanitize_search_string']
+		]
+	];
 	validate_store_request_vars($filters, 'sess_neighbor');
-	/* ================= end input validation ================= */
-	
-	$total_rows = 0;
+	// ================= end input validation =================
+
+	$total_rows       = 0;
 	$xdpNeighborStats = getXdpNeighborStats($total_rows);
-	
-	/* if the number of rows is -1, set it to the default */
+
+	// if the number of rows is -1, set it to the default
 	if (get_request_var('rows') == -1) {
 		$rows = read_config_option('num_rows_table');
 	} else {
 		$rows = get_request_var('rows');
 	}
-	
+
 	html_start_box('Neighbor Summary', '50%', '', '4', 'left', '');
 
-	$display_text = array(
-		'method'         => array('display' => __('Method', 'neighbor'),     	'sort' => '',	'align' => 'left'),
-		'hosts'          => array('display' => __('Hosts', 'neighbor'),        	'sort' => '',  	'align' => 'center'),
-		'interfaces'     => array('display' => __('Interfaces', 'neighbor'),    'sort' => '', 	'align' => 'center'),
-		'last_polled'    => array('display' => __('Last Polled', 'neighbor'),   'sort' => '',  	'align' => 'center'));
-	
-	
+	$display_text = [
+		'method'         => ['display' => __('Method', 'neighbor'),     	'sort' => '',	'align' => 'left'],
+		'hosts'          => ['display' => __('Hosts', 'neighbor'),        	'sort' => '',  	'align' => 'center'],
+		'interfaces'     => ['display' => __('Interfaces', 'neighbor'),    'sort' => '', 	'align' => 'center'],
+		'last_polled'    => ['display' => __('Last Polled', 'neighbor'),   'sort' => '',  	'align' => 'center']];
+
 	html_header_sort($display_text, get_request_var('sort_column'), get_request_var('sort_direction'), false, 'neighbor.php?action=summary');
+
 	if ($xdpNeighborStats) {
 		printf("<tr><td><a href='?action=xdp'>CPD/LLDP</a></td><td align='center'> %s </td><td align='center'> %s </td><td align='center'> %s </td>",$xdpNeighborStats['hosts'],$xdpNeighborStats['interfaces'],$xdpNeighborStats['last_polled']);
 		form_end_row();
 	}
 	html_end_box();
 }
-
-
-
-

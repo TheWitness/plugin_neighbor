@@ -3,6 +3,7 @@
 The neighbor plugin enables the collection of interface and routing neighborships, which can then be used to generate a dynamic map of your network. 
 
 Interface neighbors can be discovered using:
+
 * CDP or LLDP
 * IP Subnet information - i.e. interfaces in the same subnet are neighbors
 * Interface descriptions using regular expressions
