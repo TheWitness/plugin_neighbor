@@ -25,70 +25,84 @@
 chdir('../../');
 include('./include/auth.php');
 include_once('./lib/data_query.php');
-include_once($config['base_path'] .'/plugins/neighbor/lib/neighbor_functions.php');
+include_once($config['base_path'] . '/plugins/neighbor/lib/neighbor_functions.php');
 
-$neighbor_rules_actions = array(
+$neighbor_rules_actions = [
 	AUTOMATION_ACTION_GRAPH_DUPLICATE => __('Duplicate'),
 	AUTOMATION_ACTION_GRAPH_ENABLE    => __('Enable'),
 	AUTOMATION_ACTION_GRAPH_DISABLE   => __('Disable'),
 	AUTOMATION_ACTION_GRAPH_DELETE    => __('Delete'),
-);
+];
 
-/* set default action */
+// set default action
 set_default_action();
+
 switch (get_request_var('action')) {
 	case 'save':
 		save_vrf_rule();
+
 		break;
 	case 'actions':
 		neighbor_vrf_rules_form_actions();
+
 		break;
 	case 'item_movedown':
 		neighbor_vrf_rules_item_movedown();
 		header('Location: neighbor_vrf_rules.php?action=edit&id=' . get_filter_request_var('id'));
+
 		break;
 	case 'item_moveup':
 		neighbor_vrf_rules_item_moveup();
 		header('Location: neighbor_vrf_rules.php?action=edit&id=' . get_filter_request_var('id'));
+
 		break;
 	case 'item_remove':
 		neighbor_vrf_rules_item_remove();
 		header('Location: neighbor_vrf_rules.php?action=edit&id=' . get_filter_request_var('id'));
+
 		break;
 	case 'item_edit':
 		top_header();
 		neighbor_vrf_rules_item_edit();
 		bottom_footer();
+
 		break;
 	case 'qedit':
 		neighbor_change_query_type();
-		header('Location: neighbor_vrf_rules.php?header=false&action=edit'. '&id=' . get_filter_request_var('id'));
+		header('Location: neighbor_vrf_rules.php?header=false&action=edit' . '&id=' . get_filter_request_var('id'));
+
 		break;
 	case 'remove':
 		neighbor_vrf_rules_remove();
-		header ('Location: neighbor_vrf_rules.php');
+		header('Location: neighbor_vrf_rules.php');
+
 		break;
 	case 'edit':
 		top_header();
 		neighbor_vrf_rules_edit();
 		bottom_footer();
+
 		break;
 	case 'rule_json':
 		neighbor_rule_to_json();
+
 		break;
 	case 'interface_map':
 		top_header();
 		display_interface_map();
 		bottom_footer();
+
 		break;
 	case 'ajax_interface_map':
 		header('Content-Type: application/json');
 		ajax_interface_nodes();
+
 		break;
 	default:
 		top_header();
 		neighbor_vrf_rules();
 		bottom_footer();
+
 		break;
 }
 
@@ -98,33 +112,36 @@ switch (get_request_var('action')) {
 
 function save_vrf_rule() {
 	if (isset_request_var('save_component_neighbor_graph_rule')) {
-		/* ================= input validation ================= */
+		// ================= input validation =================
 		get_filter_request_var('id');
-		/* ==================================================== */
-		$save['id'] = get_nfilter_request_var('id');
-		$save['name'] = form_input_validate(get_nfilter_request_var('name'), 'name', '', false, 3);
+		// ====================================================
+		$save['id']          = get_nfilter_request_var('id');
+		$save['name']        = form_input_validate(get_nfilter_request_var('name'), 'name', '', false, 3);
 		$save['description'] = form_input_validate(get_nfilter_request_var('description'), 'description', '', false, 3);
-		$save['vrf'] = form_input_validate(get_nfilter_request_var('vrf'), 'vrf', '', false, 3);
-		
+		$save['vrf']         = form_input_validate(get_nfilter_request_var('vrf'), 'vrf', '', false, 3);
+
 		if ($save['id']) {
 			$save['enabled'] = (isset_request_var('enabled') ? 'on' : '');
 		}
-		
+
 		if (!is_error_message()) {
 			$rule_id = sql_save($save, 'plugin_neighbor_vrf_rules');
-			if ($rule_id) 	{ raise_message(1); }
-			else 			{ raise_message(2); }
+
+			if ($rule_id) {
+				raise_message(1);
+			} else {
+				raise_message(2);
+			}
 		}
 
 		header('Location: neighbor_vrf_rules.php?header=false&action=edit&id=' . (empty($rule_id) ? get_nfilter_request_var('id') : $rule_id));
-	}
-	elseif (isset_request_var('save_component_neighbor_vrf_rule_item')) {
-		/* ================= input validation ================= */
+	} elseif (isset_request_var('save_component_neighbor_vrf_rule_item')) {
+		// ================= input validation =================
 		get_filter_request_var('id');
 		get_filter_request_var('item_id');
-		/* ==================================================== */
+		// ====================================================
 
-		$save = array();
+		$save              = [];
 		$save['id']        = form_input_validate(get_request_var('item_id'), 'item_id', '^[0-9]+$', false, 3);
 		$save['rule_id']   = form_input_validate(get_request_var('id'), 'id', '^[0-9]+$', false, 3);
 		$save['sequence']  = form_input_validate(get_nfilter_request_var('sequence'), 'sequence', '^[0-9]+$', false, 3);
@@ -135,8 +152,12 @@ function save_vrf_rule() {
 
 		if (!is_error_message()) {
 			$item_id = sql_save($save, 'plugin_neighbor_vrf_rule_items');
-			if ($item_id) 	{ raise_message(1); }
-			else 			{ raise_message(2); }
+
+			if ($item_id) {
+				raise_message(1);
+			} else {
+				raise_message(2);
+			}
 		}
 
 		if (is_error_message()) {
@@ -145,10 +166,10 @@ function save_vrf_rule() {
 			header('Location: neighbor_vrf_rules.php?header=false&action=edit&id=' . get_request_var('id') . '&rule_type=' . AUTOMATION_RULE_TYPE_GRAPH_ACTION);
 		}
 	} elseif (isset_request_var('save_component_neighbor_vrf_match_item')) {
-		/* ================= input validation ================= */
+		// ================= input validation =================
 		get_filter_request_var('id');
 		get_filter_request_var('item_id');
-		/* ==================================================== */
+		// ====================================================
 
 		unset($save);
 		$save['id']        = form_input_validate(get_request_var('item_id'), 'item_id', '^[0-9]+$', false, 3);
@@ -162,8 +183,12 @@ function save_vrf_rule() {
 
 		if (!is_error_message()) {
 			$item_id = sql_save($save, 'plugin_neighbor_vrf_match_rule_items');
-			if ($item_id) 	{ raise_message(1); }
-			else 			{ raise_message(2); }
+
+			if ($item_id) {
+				raise_message(1);
+			} else {
+				raise_message(2);
+			}
 		}
 
 		if (is_error_message()) {
@@ -184,41 +209,41 @@ function save_vrf_rule() {
 function neighbor_vrf_rules_form_actions() {
 	global $config, $neighbor_rules_actions;
 
-        /* ================= input validation ================= */
-        get_filter_request_var('drp_action');
-        /* ==================================================== */
+	// ================= input validation =================
+	get_filter_request_var('drp_action');
+	// ====================================================
 
-	/* if we are to save this form, instead of display it */
+	// if we are to save this form, instead of display it
 	if (isset_request_var('selected_items')) {
 		$selected_items = sanitize_unserialize_selected_items(get_nfilter_request_var('selected_items'));
 
 		if ($selected_items != false) {
-			if (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DELETE) { /* delete */
+			if (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DELETE) { // delete
 				db_execute('DELETE FROM plugin_neighbor_vrf_rules WHERE ' . array_to_sql_or($selected_items, 'id'));
 				db_execute('DELETE FROM plugin_neighbor_vrf_rule_items WHERE ' . array_to_sql_or($selected_items, 'rule_id'));
 				db_execute('DELETE FROM plugin_neighbor_vrf_match_rule_items WHERE ' . array_to_sql_or($selected_items, 'rule_id'));
-			} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DUPLICATE) { /* duplicate */
-				for ($i=0;($i<count($selected_items));$i++) {
+			} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DUPLICATE) { // duplicate
+				for ($i = 0; ($i < count($selected_items)); $i++) {
 					cacti_log('form_actions duplicate: ' . $selected_items[$i] . ' name: ' . get_nfilter_request_var('name_format'), true, 'AUTOM8 TRACE', POLLER_VERBOSITY_MEDIUM);
 					duplicate_neighbor_vrf_rules($selected_items[$i], get_nfilter_request_var('name_format'));
 				}
-			} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_ENABLE) { /* enable */
-				for ($i=0;($i<count($selected_items));$i++) {
+			} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_ENABLE) { // enable
+				for ($i = 0; ($i < count($selected_items)); $i++) {
 					cacti_log('form_actions enable: ' . $selected_items[$i], true, 'AUTOM8 TRACE', POLLER_VERBOSITY_MEDIUM);
 
 					db_execute_prepared("UPDATE plugin_neighbor_vrf_rules
 						SET enabled='on'
 						WHERE id = ?",
-						array($selected_items[$i]));
+						[$selected_items[$i]]);
 				}
-			} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DISABLE) { /* disable */
-				for ($i=0;($i<count($selected_items));$i++) {
+			} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DISABLE) { // disable
+				for ($i = 0; ($i < count($selected_items)); $i++) {
 					cacti_log('form_actions disable: ' . $selected_items[$i], true, 'AUTOM8 TRACE', POLLER_VERBOSITY_MEDIUM);
 
 					db_execute_prepared("UPDATE plugin_neighbor_vrf_rules
 						SET enabled=''
 						WHERE id = ?",
-						array($selected_items[$i]));
+						[$selected_items[$i]]);
 				}
 			}
 		}
@@ -228,16 +253,18 @@ function neighbor_vrf_rules_form_actions() {
 		exit;
 	}
 
-	/* setup some variables */
-	$neighbor_rules_list = ''; $i = 0;
-	/* loop through each of the graphs selected on the previous page and get more info about them */
+	// setup some variables
+	$neighbor_rules_list = '';
+	$i                   = 0;
+
+	// loop through each of the graphs selected on the previous page and get more info about them
 	foreach ($_POST as $var => $val) {
 		if (preg_match('/^chk_([0-9]+)$/', $var, $matches)) {
-			/* ================= input validation ================= */
+			// ================= input validation =================
 			input_validate_input_number($matches[1]);
-			/* ==================================================== */
+			// ====================================================
 
-			$neighbor_rules_list .= '<li>' . db_fetch_cell_prepared('SELECT name FROM plugin_neighbor_vrf_rules WHERE id = ?', array($matches[1])) . '</li>';
+			$neighbor_rules_list .= '<li>' . db_fetch_cell_prepared('SELECT name FROM plugin_neighbor_vrf_rules WHERE id = ?', [$matches[1]]) . '</li>';
 			$neighbor_rules_array[] = $matches[1];
 		}
 	}
@@ -248,22 +275,24 @@ function neighbor_vrf_rules_form_actions() {
 
 	html_start_box($neighbor_rules_actions[get_nfilter_request_var('drp_action')], '60%', '', '3', 'center', '');
 
-	if (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DELETE) { /* delete */
+	if (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DELETE) { // delete
 		print "<tr>
 			<td class='textArea'>
 				<p>" . __('Press \'Continue\' to delete the following VRF Mapping Rules.') . "</p>
 				<ul>$neighbor_rules_list</ul>
 			</td>
 		</tr>";
-	} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DUPLICATE) { /* duplicate */
+	} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DUPLICATE) { // duplicate
 		print "<tr>
 			<td class='textArea'>
 				<p>" . __('Click \'Continue\' to duplicate the following Rule(s). You can optionally change the title format for the new VRF Mapping Rules.') . "</p>
 				<div class='itemlist'><ul>$neighbor_rules_list</ul></div>
-				<p>" . __('Title Format') . '<br>'; form_text_box('name_format', '<' . __('rule_name') . '> (1)', '', '255', '30', 'text'); print "</p>
+				<p>" . __('Title Format') . '<br>';
+		form_text_box('name_format', '<' . __('rule_name') . '> (1)', '', '255', '30', 'text');
+		print "</p>
 			</td>
 		</tr>\n";
-	} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_ENABLE) { /* enable */
+	} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_ENABLE) { // enable
 		print "<tr>
 			<td class='textArea'>
 				<p>" . __('Click \'Continue\' to enable the following Rule(s).') . "</p>
@@ -271,7 +300,7 @@ function neighbor_vrf_rules_form_actions() {
 				<p>" . __('Make sure, that those rules have successfully been tested!') . "</p>
 			</td>
 		</tr>\n";
-	} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DISABLE) { /* disable */
+	} elseif (get_nfilter_request_var('drp_action') == AUTOMATION_ACTION_GRAPH_DISABLE) { // disable
 		print "<tr>
 			<td class='textArea'>
 				<p>" . __('Click \'Continue\' to disable the following Rule(s).') . "</p>
@@ -283,7 +312,7 @@ function neighbor_vrf_rules_form_actions() {
 	if (!isset($neighbor_rules_array)) {
 		print "<tr class='even'><td><span class='textError'>" . __('You must select at least one Rule.') . "</span></td></tr>\n";
 		$save_html = "<input type='button' value='" . __esc('Return') . "' onClick='cactiReturnTo()'>";
-	}else {
+	} else {
 		$save_html = "<input type='button' value='" . __esc('Cancel') . "' onClick='cactiReturnTo()'>&nbsp;<input type='submit' value='" . __esc('Continue') . "' title='" . __esc('Apply requested action') . "'>";
 	}
 
@@ -307,11 +336,11 @@ function neighbor_vrf_rules_form_actions() {
  Rule Item Functions
  -------------------------- */
 function neighbor_vrf_rules_item_movedown() {
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	get_filter_request_var('id');
 	get_filter_request_var('item_id');
 	get_filter_request_var('rule_type');
-	/* ==================================================== */
+	// ====================================================
 
 	if (get_request_var('rule_type') == AUTOMATION_RULE_TYPE_GRAPH_MATCH) {
 		move_item_down('plugin_neighbor_match_rule_items', get_request_var('item_id'), 'rule_id=' . get_request_var('id') . ' AND rule_type=' . get_request_var('rule_type'));
@@ -321,11 +350,11 @@ function neighbor_vrf_rules_item_movedown() {
 }
 
 function neighbor_vrf_rules_item_moveup() {
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	get_filter_request_var('id');
 	get_filter_request_var('item_id');
 	get_filter_request_var('rule_type');
-	/* ==================================================== */
+	// ====================================================
 
 	if (get_request_var('rule_type') == AUTOMATION_RULE_TYPE_GRAPH_MATCH) {
 		move_item_up('plugin_neighbor_match_rule_items', get_request_var('item_id'), 'rule_id=' . get_request_var('id') . ' AND rule_type=' . get_request_var('rule_type'));
@@ -335,27 +364,26 @@ function neighbor_vrf_rules_item_moveup() {
 }
 
 function neighbor_vrf_rules_item_remove() {
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	get_filter_request_var('item_id');
 	get_filter_request_var('rule_type');
-	/* ==================================================== */
+	// ====================================================
 
 	if (get_request_var('rule_type') == AUTOMATION_RULE_TYPE_GRAPH_MATCH) {
-		db_execute_prepared('DELETE FROM plugin_neighbor_match_rule_items WHERE id = ?', array(get_request_var('item_id')));
+		db_execute_prepared('DELETE FROM plugin_neighbor_match_rule_items WHERE id = ?', [get_request_var('item_id')]);
 	} elseif (get_request_var('rule_type') == AUTOMATION_RULE_TYPE_GRAPH_ACTION) {
-		db_execute_prepared('DELETE FROM plugin_neighbor_vrf_rule_items WHERE id = ?', array(get_request_var('item_id')));
+		db_execute_prepared('DELETE FROM plugin_neighbor_vrf_rule_items WHERE id = ?', [get_request_var('item_id')]);
 	}
-
 }
 
 function neighbor_vrf_rules_item_edit() {
 	global $config;
 
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	get_filter_request_var('id');
 	get_filter_request_var('item_id');
 	get_filter_request_var('rule_type');
-	/* ==================================================== */
+	// ====================================================
 
 	neighbor_global_vrf_item_edit(get_request_var('id'), get_request_var('item_id'), get_request_var('rule_type'));
 
@@ -363,7 +391,7 @@ function neighbor_vrf_rules_item_edit() {
 	form_hidden_box('id', (isset_request_var('id') ? get_request_var('id') : '0'), '');
 	form_hidden_box('item_id', (isset_request_var('item_id') ? get_request_var('item_id') : '0'), '');
 
-	if(get_request_var('rule_type') == AUTOMATION_RULE_TYPE_GRAPH_MATCH) {
+	if (get_request_var('rule_type') == AUTOMATION_RULE_TYPE_GRAPH_MATCH) {
 		form_hidden_box('save_component_neighbor_vrf_match_item', '1', '');
 	} else {
 		form_hidden_box('save_component_neighbor_vrf_rule_item', '1', '');
@@ -380,7 +408,7 @@ function neighbor_vrf_rules_item_edit() {
 	});
 
 	function toggle_operation() {
-		if ($('#operation').val() == '<?php print AUTOMATION_OPER_RIGHT_BRACKET;?>') {
+		if ($('#operation').val() == '<?php print AUTOMATION_OPER_RIGHT_BRACKET; ?>') {
 			$('#field').val('');
 			$('#field').prop('disabled', true);
 			$('#operator').val(0);
@@ -395,7 +423,7 @@ function neighbor_vrf_rules_item_edit() {
 	}
 
 	function toggle_operator() {
-		if ($('#operator').val() == '<?php print AUTOMATION_OPER_RIGHT_BRACKET;?>') {
+		if ($('#operator').val() == '<?php print AUTOMATION_OPER_RIGHT_BRACKET; ?>') {
 		} else {
 		}
 	}
@@ -408,13 +436,13 @@ function neighbor_vrf_rules_item_edit() {
  --------------------- */
 
 function neighbor_vrf_rules_remove() {
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	get_filter_request_var('id');
-	/* ==================================================== */
+	// ====================================================
 
 	if ((read_config_option('deletion_verification') == 'on') && (!isset_request_var('confirm'))) {
 		top_header();
-		form_confirm(__('Are You Sure?'), __("Are you sure you want to delete the Rule '%s'?", db_fetch_cell_prepared('SELECT name FROM plugin_neighbor_vrf_rules WHERE id = ?', array(get_request_var('id')))), 'neighbor_vrf_rules.php', 'neighbor_vrf_rules.php?action=remove&id=' . get_request_var('id'));
+		form_confirm(__('Are You Sure?'), __("Are you sure you want to delete the Rule '%s'?", db_fetch_cell_prepared('SELECT name FROM plugin_neighbor_vrf_rules WHERE id = ?', [get_request_var('id')])), 'neighbor_vrf_rules.php', 'neighbor_vrf_rules.php?action=remove&id=' . get_request_var('id'));
 		bottom_footer();
 		exit;
 	}
@@ -423,15 +451,15 @@ function neighbor_vrf_rules_remove() {
 		db_execute_prepared('DELETE FROM plugin_neighbor_vrf_match_rule_items
 			WHERE rule_id = ?
 			AND rule_type = ?',
-			array(get_request_var('id'), AUTOMATION_RULE_TYPE_GRAPH_MATCH));
+			[get_request_var('id'), AUTOMATION_RULE_TYPE_GRAPH_MATCH]);
 
 		db_execute_prepared('DELETE FROM plugin_neighbor_vrf_rule_items
 			WHERE rule_id = ?',
-			array(get_request_var('id')));
+			[get_request_var('id')]);
 
 		db_execute_prepared('DELETE FROM plugin_neighbor_vrf_rules
 			WHERE id = ?',
-			array(get_request_var('id')));
+			[get_request_var('id')]);
 	}
 }
 
@@ -440,54 +468,59 @@ function neighbor_change_query_type() {
 
 	if (isset_request_var('snmp_query_id') && $id > 0) {
 		$snmp_query_id = get_filter_request_var('snmp_query_id');
-		$name = get_nfilter_request_var('name');
+		$name          = get_nfilter_request_var('name');
 
 		db_execute_prepared('UPDATE plugin_neighbor_vrf_rules
 			SET snmp_query_id = ?, name = ?
 			WHERE id = ?',
-			array($snmp_query_id, $name, $id));
+			[$snmp_query_id, $name, $id]);
 		raise_message(1);
-	}
-	elseif (isset_request_var('neighbor_type') && $id > 0) {
-		$name = get_nfilter_request_var('name');
-		$neighbor_type = get_nfilter_request_var('neighbor_type');
+	} elseif (isset_request_var('neighbor_type') && $id > 0) {
+		$name             = get_nfilter_request_var('name');
+		$neighbor_type    = get_nfilter_request_var('neighbor_type');
 		$neighbor_options = get_nfilter_request_var('neighbor_options');
 		db_execute_prepared('UPDATE plugin_neighbor_vrf_rules
 			SET neighbor_type = ?, name = ?, neighbor_options = ?
 			WHERE id = ?',
-			array($neighbor_type, $name, $neighbor_options, $id));
+			[$neighbor_type, $name, $neighbor_options, $id]);
 		raise_message(1);
-	}
-	elseif (isset_request_var('neighbor_options') && $id > 0) {
-		$name = get_nfilter_request_var('name');
-		$neighbor_type = get_nfilter_request_var('neighbor_type');
+	} elseif (isset_request_var('neighbor_options') && $id > 0) {
+		$name             = get_nfilter_request_var('name');
+		$neighbor_type    = get_nfilter_request_var('neighbor_type');
 		$neighbor_options = get_nfilter_request_var('neighbor_options');
 		db_execute_prepared('UPDATE plugin_neighbor_vrf_rules
 			SET neighbor_type = ?, name = ?, neighbor_options = ?
 			WHERE id = ?',
-			array($neighbor_type, $name, $neighbor_options, $id));
+			[$neighbor_type, $name, $neighbor_options, $id]);
 		raise_message(1);
 	}
-	
 }
 
 function neighbor_vrf_rules_edit() {
 	global $config;
 	global $fields_neighbor_vrf_rules_edit1, $fields_neighbor_graph_rules_edit2;
 
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	get_filter_request_var('id');
 	get_filter_request_var('show_neighbors');
 	get_filter_request_var('show_hosts');
 	get_filter_request_var('show_rule');
-	/* ==================================================== */
+	// ====================================================
 
-	/* clean up rule name */
-	if (isset_request_var('name')) 				{ set_request_var('name', sanitize_search_string(get_request_var('name'))); }
-	if (isset_request_var('description')) 		{ set_request_var('description', sanitize_search_string(get_request_var('description')));}
-	if (isset_request_var('vrf')) 				{ set_request_var('vrf', sanitize_search_string(get_request_var('vrf')));}
+	// clean up rule name
+	if (isset_request_var('name')) {
+		set_request_var('name', sanitize_search_string(get_request_var('name')));
+	}
 
-	/* handle show_rule mode */
+	if (isset_request_var('description')) {
+		set_request_var('description', sanitize_search_string(get_request_var('description')));
+	}
+
+	if (isset_request_var('vrf')) {
+		set_request_var('vrf', sanitize_search_string(get_request_var('vrf')));
+	}
+
+	// handle show_rule mode
 	if (isset_request_var('show_rule')) {
 		if (get_request_var('show_rule') == '0') {
 			kill_session_var('neighbor_rules_show_rule');
@@ -499,7 +532,7 @@ function neighbor_vrf_rules_edit() {
 		$_SESSION['neighbor_rules_show_rule'] = true;
 	}
 
-	/* handle show_neighbors mode */
+	// handle show_neighbors mode
 	if (isset_request_var('show_neighbors')) {
 		if (get_request_var('show_neighbors') == '0') {
 			kill_session_var('neighbor_rules_show_neighbors');
@@ -508,7 +541,7 @@ function neighbor_vrf_rules_edit() {
 		}
 	}
 
-	/* handle show_hosts mode */
+	// handle show_hosts mode
 	if (isset_request_var('show_hosts')) {
 		if (get_request_var('show_hosts') == '0') {
 			kill_session_var('neighbor_rules_show_hosts');
@@ -517,55 +550,34 @@ function neighbor_vrf_rules_edit() {
 		}
 	}
 
-	/*
-	 * display the rule -------------------------------------------------------------------------------------
-	 */
-	$rule = array();
+	// display the rule -------------------------------------------------------------------------------------
+	$rule = [];
+
 	if (!isempty_request_var('id')) {
-		$rule = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_vrf_rules where id = ?', array(get_request_var('id')));
+		$rule = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_vrf_rules where id = ?', [get_request_var('id')]);
 
 		if (!isempty_request_var('graph_type_id')) {
-			$rule['graph_type_id'] = get_request_var('graph_type_id'); # set query_type for display
+			$rule['graph_type_id'] = get_request_var('graph_type_id'); // set query_type for display
 		}
-		# setup header
+		// setup header
 		$header_label = __('Rule Selection [edit: %s]', html_escape($rule['name']));
-	}
-	else {
-		$rule = array (
-				'name' 			=> get_request_var('name'),
+	} else {
+		$rule =  [
+				'name' 			     => get_request_var('name'),
 				'description' 	=> get_request_var('description'),
-				'vrf'			=> get_request_var('vrf'),
-				);
+				'vrf'			       => get_request_var('vrf'),
+				];
 		$header_label = __('VRF Mapping Rule [new]');
 	}
 
-	/*
-	 * show rule? ------------------------------------------------------------------------------------------
-	 */
-	if (!isempty_request_var('id')) {
-	?>
-	<table style='width:100%;text-align:center;'>
-		<tr>
-			<td class='textInfo right' style='vertical-align:top;'><span class='linkMarker'>*</span>
-			<a class='linkEditMain' href='<?php print html_escape('neighbor_vrf_rules.php?action=edit&id=' . (isset_request_var('id') ? get_request_var('id') : 0) . '&show_rule=') . ($_SESSION['neighbor_rules_show_rule'] == true ? '0' : '1');?>'>
-			<?php print ($_SESSION['neighbor_rules_show_rule'] == true ? __('Don\'t Show'):__('Show'));?> <?php print __('Rule Details.');?></a><br>
-			</td>
-		</tr>
-	</table>
-
-	<?php
-	}
-
-	/*
-	 * show hosts? ------------------------------------------------------------------------------------------
-	 */
+	// show rule? ------------------------------------------------------------------------------------------
 	if (!isempty_request_var('id')) {
 		?>
 	<table style='width:100%;text-align:center;'>
 		<tr>
 			<td class='textInfo right' style='vertical-align:top;'><span class='linkMarker'>*</span>
-			<a class='linkEditMain' href='<?php print html_escape('neighbor_vrf_rules.php?action=edit&id=' . (isset_request_var('id') ? get_request_var('id') : 0) . '&show_hosts=') . (isset($_SESSION['neighbor_rules_show_hosts']) ? '0' : '1');?>'>
-			<?php print (isset($_SESSION['neighbor_rules_show_hosts']) ? __('Don\'t Show'):__('Show'));?> <?php print __('Matching Devices.');?></a><br>
+			<a class='linkEditMain' href='<?php print html_escape('neighbor_vrf_rules.php?action=edit&id=' . (isset_request_var('id') ? get_request_var('id') : 0) . '&show_rule=') . ($_SESSION['neighbor_rules_show_rule'] == true ? '0' : '1'); ?>'>
+			<?php print($_SESSION['neighbor_rules_show_rule'] == true ? __('Don\'t Show') : __('Show')); ?> <?php print __('Rule Details.'); ?></a><br>
 			</td>
 		</tr>
 	</table>
@@ -573,17 +585,30 @@ function neighbor_vrf_rules_edit() {
 	<?php
 	}
 
-	/*
-	 * show graphs? -----------------------------------------------------------------------------------------
-	 */
+	// show hosts? ------------------------------------------------------------------------------------------
+	if (!isempty_request_var('id')) {
+		?>
+	<table style='width:100%;text-align:center;'>
+		<tr>
+			<td class='textInfo right' style='vertical-align:top;'><span class='linkMarker'>*</span>
+			<a class='linkEditMain' href='<?php print html_escape('neighbor_vrf_rules.php?action=edit&id=' . (isset_request_var('id') ? get_request_var('id') : 0) . '&show_hosts=') . (isset($_SESSION['neighbor_rules_show_hosts']) ? '0' : '1'); ?>'>
+			<?php print(isset($_SESSION['neighbor_rules_show_hosts']) ? __('Don\'t Show') : __('Show')); ?> <?php print __('Matching Devices.'); ?></a><br>
+			</td>
+		</tr>
+	</table>
+
+	<?php
+	}
+
+	// show graphs? -----------------------------------------------------------------------------------------
 	if (!isempty_request_var('id')) {
 		?>
 	<table style='width:100%;text-align:center;'>
 		<tr>
 			<td class='textInfo right' style='vertical-align:top;'>
 				<span class='linkMarker'>*</span>
-				<a class='linkEditMain' href='<?php print html_escape('neighbor_vrf_rules.php?action=edit&id=' . (isset_request_var('id') ? get_request_var('id') : 0) . '&show_neighbors=') . (isset($_SESSION['neighbor_rules_show_neighbors']) ? '0' : '1');?>'>
-				<?php print (isset($_SESSION['neighbor_rules_show_neighbors']) ? __('Don\'t Show'):__('Show'));?> <?php print __('Matching Objects.');?></a><br>
+				<a class='linkEditMain' href='<?php print html_escape('neighbor_vrf_rules.php?action=edit&id=' . (isset_request_var('id') ? get_request_var('id') : 0) . '&show_neighbors=') . (isset($_SESSION['neighbor_rules_show_neighbors']) ? '0' : '1'); ?>'>
+				<?php print(isset($_SESSION['neighbor_rules_show_neighbors']) ? __('Don\'t Show') : __('Show')); ?> <?php print __('Matching Objects.'); ?></a><br>
 			</td>
 			</tr>
 	</table>
@@ -592,86 +617,83 @@ function neighbor_vrf_rules_edit() {
 	}
 
 	if ($_SESSION['neighbor_rules_show_rule']) {
-		
 		form_start('neighbor_vrf_rules.php', 'neighbor_rules');
 		html_start_box($header_label, '100%', true, '3', 'center', '');
 
 		if (!isempty_request_var('id')) {
-			$vrfDiscovered = get_vrf_list();
-			$fields_neighbor_vrf_rules_edit2['vrf'] = array(
-				'method' => 'drop_array',
+			$vrfDiscovered                          = get_vrf_list();
+			$fields_neighbor_vrf_rules_edit2['vrf'] = [
+				'method'        => 'drop_array',
 				'friendly_name' => __('VRF Name'),
-				'description' => __('Select a VRF to map to'),
-				'value' => '|arg1:vrf|',
-				'array'	=> $vrfDiscovered,
-				'max_length' => '64',
-				'size' => '64'
-			);
-				
+				'description'   => __('Select a VRF to map to'),
+				'value'         => '|arg1:vrf|',
+				'array'	        => $vrfDiscovered,
+				'max_length'    => '64',
+				'size'          => '64'
+			];
+
 			$form_array = $fields_neighbor_vrf_rules_edit1 + $fields_neighbor_vrf_rules_edit2;
-			/* display whole rule */
+			// display whole rule
 		} else {
-			/* display first part of rule only and request user to proceed */
-			
+			// display first part of rule only and request user to proceed
+
 			$vrfDiscovered = get_vrf_list();
-			
-			$form_array = array(
-					'name' => array(
-						'method' => 'textbox',
+
+			$form_array = [
+					'name' => [
+						'method'        => 'textbox',
 						'friendly_name' => __('Name'),
-						'description' => __('A useful name for this Rule.'),
-						'value' => '|arg1:name|',
-						'max_length' => '64',
-						'size' => '64'
-					),
-					'description' => array(
-						'method' => 'textbox',
+						'description'   => __('A useful name for this Rule.'),
+						'value'         => '|arg1:name|',
+						'max_length'    => '64',
+						'size'          => '64'
+					],
+					'description' => [
+						'method'        => 'textbox',
 						'friendly_name' => __('Description'),
-						'description' => __('A description of this Rule'),
-						'value' => '|arg1:description|',
-						'max_length' => '64',
-						'size' => '64'
-					),
-					'vrf' => array(
-						'method' => 'drop_array',
+						'description'   => __('A description of this Rule'),
+						'value'         => '|arg1:description|',
+						'max_length'    => '64',
+						'size'          => '64'
+					],
+					'vrf' => [
+						'method'        => 'drop_array',
 						'friendly_name' => __('VRF Name'),
-						'description' => __('Select a VRF to map to'),
-						'value' => '|arg1:vrf|',
-						'array'	=> $vrfDiscovered,
-						'max_length' => '64',
-						'size' => '64'
-					)
-					
-			);
+						'description'   => __('Select a VRF to map to'),
+						'value'         => '|arg1:vrf|',
+						'array'	        => $vrfDiscovered,
+						'max_length'    => '64',
+						'size'          => '64'
+					]
+			];
 		}
 
 		if (isset_request_var('name')) {
-			$rule['name'] = get_request_var('name');
+			$rule['name']        = get_request_var('name');
 			$rule['description'] = get_request_var('description');
-			$rule['vrf'] = get_request_var('vrf');
+			$rule['vrf']         = get_request_var('vrf');
 		}
-		
-		draw_edit_form(array(
-			'config' => array('no_form_tag' => true),
-			'fields' => inject_form_variables($form_array, (isset($rule) ? $rule : array()))
-		));
+
+		draw_edit_form([
+			'config' => ['no_form_tag' => true],
+			'fields' => inject_form_variables($form_array, (isset($rule) ? $rule : []))
+		]);
 
 		html_end_box(true, true);
 
 		form_hidden_box('id', (isset($rule['id']) ? $rule['id'] : '0'), '');
 		form_hidden_box('save_component_neighbor_graph_rule', '1', '');
 	}
-	/*
-	 * display the rule items -------------------------------------------------------------------------------
-	 */
+
+	// display the rule items -------------------------------------------------------------------------------
 	if (!empty($rule['id'])) {
-		# display graph rules for host match
+		// display graph rules for host match
 		neighbor_display_vrf_match_rule_items(__('Device Selection Criteria'),
 			$rule['id'],
 			AUTOMATION_RULE_TYPE_GRAPH_MATCH,
 			'neighbor_vrf_rules.php');
 
-		# fetch graph action rules
+		// fetch graph action rules
 		neighbor_display_vrf_rule_items(__('Neighbor Creation Criteria'),
 			$rule['id'],
 			AUTOMATION_RULE_TYPE_GRAPH_ACTION,
@@ -680,16 +702,16 @@ function neighbor_vrf_rules_edit() {
 
 	form_save_button('neighbor_vrf_rules.php', 'return');
 	print '<br>';
-	
+
 	if (!empty($rule['id'])) {
-		/* display list of matching hosts */
+		// display list of matching hosts
 		if (isset($_SESSION['neighbor_rules_show_hosts'])) {
 			if ($_SESSION['neighbor_rules_show_hosts']) {
 				neighbor_display_vrf_matching_hosts($rule, AUTOMATION_RULE_TYPE_GRAPH_MATCH, 'neighbor_vrf_rules.php?action=edit&id=' . get_request_var('id'));
 			}
 		}
 
-		/* display list of new graphs */
+		// display list of new graphs
 		if (isset($_SESSION['neighbor_rules_show_neighbors'])) {
 			if ($_SESSION['neighbor_rules_show_neighbors']) {
 				neighbor_display_vrf_object_matches($rule, 'neighbor_vrf_rules.php?action=edit&id=' . get_request_var('id'));
@@ -725,61 +747,63 @@ function neighbor_vrf_rules_edit() {
 }
 
 function neighbor_vrf_rules() {
-	
 	global $neighbor_rules_actions, $config, $item_rows;
 
-	/* ================= input validation and session storage ================= */
-	$filters = array(
-		'rows' => array(
-			'filter' => FILTER_VALIDATE_INT,
+	// ================= input validation and session storage =================
+	$filters = [
+		'rows' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => '-1'
-			),
-		'page' => array(
-			'filter' => FILTER_VALIDATE_INT,
+			],
+		'page' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'default' => '1'
-			),
-		'filter' => array(
-			'filter' => FILTER_CALLBACK,
+			],
+		'filter' => [
+			'filter'  => FILTER_CALLBACK,
 			'pageset' => true,
 			'default' => '',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'sort_column' => array(
-			'filter' => FILTER_CALLBACK,
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'sort_column' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'name',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'sort_direction' => array(
-			'filter' => FILTER_CALLBACK,
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'sort_direction' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'ASC',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'status' => array(
-			'filter' => FILTER_VALIDATE_INT,
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'status' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => '-1'
-			),
-		'snmp_query_id' => array(
-			'filter' => FILTER_VALIDATE_INT,
+			],
+		'snmp_query_id' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => ''
-			),
-	);
+			],
+	];
 
 	validate_store_request_vars($filters, 'sess_autom_gr');
-	/* ================= input validation ================= */
+	// ================= input validation =================
 
-	if (get_request_var('rows') == -1) 	{ $rows = read_config_option('num_rows_table'); }
-	else 								{ $rows = get_request_var('rows'); }
+	if (get_request_var('rows') == -1) {
+		$rows = read_config_option('num_rows_table');
+	} else {
+		$rows = get_request_var('rows');
+	}
 
-	$total_rows = 0;
-	$page 			= get_request_var('page') ? get_request_var('page') : 1;
-	$start_row 		= ($page-1) * $rows;
-	$end_row 		= (($page-1) * $rows) + $rows - 1;
-	$sort_column 	= get_request_var('sort_column');
-	$sort_direction 	= get_request_var('sort_direction');
-	$filter_val 		= get_request_var('filter');
+	$total_rows       = 0;
+	$page 			         = get_request_var('page') ? get_request_var('page') : 1;
+	$start_row 		     = ($page - 1) * $rows;
+	$end_row 		       = (($page - 1) * $rows) + $rows - 1;
+	$sort_column 	    = get_request_var('sort_column');
+	$sort_direction 	 = get_request_var('sort_direction');
+	$filter_val 		    = get_request_var('filter');
 
 	$neighbor_rules = get_neighbor_vrf_rules($total_rows,$start_row, $rows,$filter_val,$sort_column,$sort_direction);
 	get_neighbor_vrf_rules_filter();
@@ -792,17 +816,16 @@ function neighbor_vrf_rules() {
 
 	html_start_box('', '100%', '', '3', 'center', '');
 
-	$display_text = array(
-		'name'            => array('display' => __('Rule Name'),  'align' => 'left', 'sort' => 'ASC', 'tip' => __('The name of this rule.')),
-		'id'              => array('display' => __('ID'),         'align' => 'right', 'sort' => 'ASC', 'tip' => __('The internal database ID for this rule.  Useful in performing debugging and automation.')),
-		'enabled'         => array('display' => __('Enabled'),    'align' => 'right', 'sort' => 'ASC'),
-	);
+	$display_text = [
+		'name'            => ['display' => __('Rule Name'),  'align' => 'left', 'sort' => 'ASC', 'tip' => __('The name of this rule.')],
+		'id'              => ['display' => __('ID'),         'align' => 'right', 'sort' => 'ASC', 'tip' => __('The internal database ID for this rule.  Useful in performing debugging and automation.')],
+		'enabled'         => ['display' => __('Enabled'),    'align' => 'right', 'sort' => 'ASC'],
+	];
 
 	html_header_sort_checkbox($display_text, get_request_var('sort_column'), get_request_var('sort_direction'), false);
 
 	if (count((array) $neighbor_rules)) {
 		foreach ($neighbor_rules as $rule) {
-
 			form_alternate_row('line' . $rule['id'], true);
 
 			form_selectable_cell(filter_value($rule['name'], get_request_var('filter'), 'neighbor_vrf_rules.php?action=edit&id=' . $rule['id'] . '&page=1'), $rule['id']);
@@ -812,43 +835,55 @@ function neighbor_vrf_rules() {
 			form_end_row();
 		}
 	} else {
-		print "<tr><td><em>" . __('No VRF Mapping Rules Found') . "</em></td></tr>\n";
+		print '<tr><td><em>' . __('No VRF Mapping Rules Found') . "</em></td></tr>\n";
 	}
 
 	html_end_box(false);
 
-	if (count((array) $neighbor_rules)) { print $nav; }
+	if (count((array) $neighbor_rules)) {
+		print $nav;
+	}
 
-	/* draw the dropdown containing a list of available actions for this form */
+	// draw the dropdown containing a list of available actions for this form
 	draw_actions_dropdown($neighbor_rules_actions);
 	form_end();
 }
 
 function get_neighbor_vrf_rules(&$total_rows = 0, $row_start = 1, $row_end = 25, $filter_val = '', $order_field = 'hostname', $order_dir = 'asc', $output = 'array') {
-	
-	$sql_where 	= '';
-    $sql_order 	= '';
-    $sql_limit 	= sprintf("limit %d,%d",$row_start,$row_end);
-    $result 	= '';
-    
-    $conditions = array();
-    $params = array();
+	$sql_where 	 = '';
+	$sql_order 	 = '';
+	$sql_limit 	 = sprintf('limit %d,%d',$row_start,$row_end);
+	$result 	    = '';
 
-	if ($order_field && ($order_dir != ''))   { $sql_order = "order by $order_field $order_dir"; }
-	if ($filter_val != '')										{ array_push($conditions,"`name` like ?"); array_push($params, $filter_val); }
-		
-    $sql_where = count($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-    $result = db_fetch_assoc_prepared("select * from plugin_neighbor_vrf_rules rules $sql_where $sql_order $sql_limit", $params);
-    $total_rows = db_fetch_cell_prepared("select count(*) as total_rows from plugin_neighbor_vrf_rules rules $sql_where",$params);
-    //print "Set total_rows = $total_rows<br>";
-    if ($output == 'array') 	{ return($result);}
-    elseif ($output == 'json') 	{ return(json_encode($result));}
-	
+	$conditions = [];
+	$params     = [];
+
+	if ($order_field && ($order_dir != '')) {
+		$sql_order = "order by $order_field $order_dir";
+	}
+
+	if ($filter_val != '') {
+		array_push($conditions,'`name` like ?');
+		array_push($params, $filter_val);
+	}
+
+	$sql_where  = count($conditions) ? 'WHERE ' . implode(' AND ', $conditions) : '';
+	$result     = db_fetch_assoc_prepared("select * from plugin_neighbor_vrf_rules rules $sql_where $sql_order $sql_limit", $params);
+	$total_rows = db_fetch_cell_prepared("select count(*) as total_rows from plugin_neighbor_vrf_rules rules $sql_where",$params);
+
+	// print "Set total_rows = $total_rows<br>";
+	if ($output == 'array') {
+		return ($result);
+	}
+
+	if ($output == 'json') {
+		return (json_encode($result));
+	}
 }
 
 function get_neighbor_vrf_rules_filter() {
 	global $automation_graph_rules_actions, $config, $item_rows;
-	
+
 	html_start_box(__('VRF Mapping Rules'), '100%', '', '3', 'center', 'neighbor_vrf_rules.php?action=edit');
 
 	?>
@@ -858,40 +893,40 @@ function get_neighbor_vrf_rules_filter() {
 				<table class='filterTable'>
 					<tr>
 						<td>
-							<?php print __('Search');?>
+							<?php print __('Search'); ?>
 						</td>
 						<td>
-							<input type='text' id='filter' size='25' value='<?php print html_escape_request_var('filter');?>'>
+							<input type='text' id='filter' size='25' value='<?php print html_escape_request_var('filter'); ?>'>
 						</td>
 						<td>
-							<?php print __('Status');?>
+							<?php print __('Status'); ?>
 						</td>
 						<td>
 							<select id='status'>
-								<option value='-1' <?php print (get_request_var('status') == '-1' ? ' selected':'');?>><?php print __('Any');?></option>
-								<option value='-2' <?php print (get_request_var('status') == '-2' ? ' selected':'');?>><?php print __('Enabled');?></option>
-								<option value='-3' <?php print (get_request_var('status') == '-3' ? ' selected':'');?>><?php print __('Disabled');?></option>
+								<option value='-1' <?php print(get_request_var('status') == '-1' ? ' selected' : ''); ?>><?php print __('Any'); ?></option>
+								<option value='-2' <?php print(get_request_var('status') == '-2' ? ' selected' : ''); ?>><?php print __('Enabled'); ?></option>
+								<option value='-3' <?php print(get_request_var('status') == '-3' ? ' selected' : ''); ?>><?php print __('Disabled'); ?></option>
 							</select>
 						</td>
 						<td>
-							<?php print __('Rows');?>
+							<?php print __('Rows'); ?>
 						</td>
 						<td>
 							<select id='rows'>
-								<option value='-1'<?php print (get_request_var('rows') == '-1' ? ' selected>':'>') . __('Default');?></option>
+								<option value='-1'<?php print (get_request_var('rows') == '-1' ? ' selected>' : '>') . __('Default'); ?></option>
 								<?php
 								if (sizeof($item_rows) > 0) {
 									foreach ($item_rows as $key => $value) {
-										print "<option value='" . $key . "'" . (get_request_var('rows') == $key ? ' selected':'') . '>' . $value . "</option>\n";
+										print "<option value='" . $key . "'" . (get_request_var('rows') == $key ? ' selected' : '') . '>' . $value . "</option>\n";
 									}
 								}
-								?>
+	?>
 							</select>
 						</td>
 						<td>
 							<span>
-								<input type='submit' id='refresh' name='go' value='<?php print __esc('Go');?>'>
-								<input type='button' id='clear' value='<?php print __esc('Clear');?>'></td>
+								<input type='submit' id='refresh' name='go' value='<?php print __esc('Go'); ?>'>
+								<input type='button' id='clear' value='<?php print __esc('Clear'); ?>'></td>
 							</span>
 					</tr>
 				</table>
@@ -931,22 +966,20 @@ function get_neighbor_vrf_rules_filter() {
 	<?php
 
 	html_end_box();
-	
 }
 
 function get_vrf_list($output = 'array') {
-	
-	$vrf = array( 'global' => 'Global Table (no VRF)');
-	$result = db_fetch_assoc_prepared("SELECT DISTINCT vrf FROM plugin_neighbor_ipv4_cache ORDER BY vrf ASC", array());
+	$vrf    = [ 'global' => 'Global Table (no VRF)'];
+	$result = db_fetch_assoc_prepared('SELECT DISTINCT vrf FROM plugin_neighbor_ipv4_cache ORDER BY vrf ASC', []);
+
 	foreach ((array) $result as $row) {
 		if ($row['vrf']) {
 			$vrf[$row['vrf']] = $row['vrf'];
 		}
 	}
-	return($vrf);
-	
-}
 
+	return ($vrf);
+}
 
 function neighbor_display_vrf_match_rule_items($title, $rule_id, $rule_type, $module) {
 	global $automation_op_array, $automation_oper, $automation_tree_header_types;
@@ -956,52 +989,53 @@ function neighbor_display_vrf_match_rule_items($title, $rule_id, $rule_type, $mo
 		WHERE rule_id = ?
 		AND rule_type = ?
 		ORDER BY sequence',
-		array($rule_id, $rule_type));
+		[$rule_id, $rule_type]);
 
 	html_start_box($title, '100%', '', '3', 'center', $module . '?action=item_edit&id=' . $rule_id . '&rule_type=' . $rule_type);
 
-	$display_text = array(
-		array('display' => __('Item'),      'align' => 'left'),
-		array('display' => __('Sequence'),  'align' => 'left'),
-		array('display' => __('Operation'), 'align' => 'left'),
-		array('display' => __('Field'),     'align' => 'left'),
-		array('display' => __('Operator'),  'align' => 'left'),
-		array('display' => __('Pattern'),   'align' => 'left'),
-		array('display' => __('Actions'),   'align' => 'right')
-	);
+	$display_text = [
+		['display' => __('Item'),      'align' => 'left'],
+		['display' => __('Sequence'),  'align' => 'left'],
+		['display' => __('Operation'), 'align' => 'left'],
+		['display' => __('Field'),     'align' => 'left'],
+		['display' => __('Operator'),  'align' => 'left'],
+		['display' => __('Pattern'),   'align' => 'left'],
+		['display' => __('Actions'),   'align' => 'right']
+	];
 
 	html_header($display_text, 2);
 
 	$i = 0;
+
 	if (count((array) $items)) {
 		foreach ($items as $item) {
 			$operation = ($item['operation'] != 0) ? $automation_oper[$item['operation']] : '&nbsp;';
 
 			form_alternate_row();
-			$form_data = '<td><a class="linkEditMain" href="' . htmlspecialchars($module . '?action=item_edit&id=' . $rule_id. '&item_id=' . $item['id'] . '&rule_type=' . $rule_type) . '">Item#' . ($i+1) . '</a></td>';
-			$form_data .= '<td>' . 	$item['sequence'] . '</td>';
-			$form_data .= '<td>' . 	$operation . '</td>';
-			$form_data .= '<td>' . 	$item['field'] . '</td>';
-			$form_data .= '<td>' . 	((isset($item['operator']) && $item['operator'] > 0) ? $automation_op_array['display'][$item['operator']] : '') . '</td>';
-			$form_data .= '<td>' . 	$item['pattern'] . '</td>';
+			$form_data = '<td><a class="linkEditMain" href="' . htmlspecialchars($module . '?action=item_edit&id=' . $rule_id . '&item_id=' . $item['id'] . '&rule_type=' . $rule_type) . '">Item#' . ($i + 1) . '</a></td>';
+			$form_data .= '<td>' . $item['sequence'] . '</td>';
+			$form_data .= '<td>' . $operation . '</td>';
+			$form_data .= '<td>' . $item['field'] . '</td>';
+			$form_data .= '<td>' . ((isset($item['operator']) && $item['operator'] > 0) ? $automation_op_array['display'][$item['operator']] : '') . '</td>';
+			$form_data .= '<td>' . $item['pattern'] . '</td>';
 
 			$form_data .= '<td class="right nowrap">';
 
-			if ($i != count((array) $items)-1) {
+			if ($i != count((array) $items) - 1) {
 				$form_data .= '<a class="pic fa fa-caret-down moveArrow" href="' . htmlspecialchars($module . '?action=item_movedown&item_id=' . $item['id'] . '&id=' . $rule_id . '&rule_type=' . $rule_type) . '" title="' . __esc('Move Down') . '"></a>';
 			} else {
 				$form_data .= '<span class="moveArrowNone"></span>';
 			}
 
 			if ($i > 0) {
-				$form_data .= '<a class="pic fa fa-caret-up moveArrow" href="' . htmlspecialchars($module . '?action=item_moveup&item_id=' . $item['id'] .	'&id=' . $rule_id .	'&rule_type=' . $rule_type) . '" title="' . __esc('Move Up') . '"></a>';
+				$form_data .= '<a class="pic fa fa-caret-up moveArrow" href="' . htmlspecialchars($module . '?action=item_moveup&item_id=' . $item['id'] . '&id=' . $rule_id . '&rule_type=' . $rule_type) . '" title="' . __esc('Move Up') . '"></a>';
 			} else {
 				$form_data .= '<span class="moveArrowNone"></span>';
 			}
 			$form_data .= '</td>';
 
 			$form_data .= '<td style="width:1%;">
-				<a class="pid deleteMarker fa fa-remove" href="' . htmlspecialchars($module . '?action=item_remove&item_id=' . $item['id'] .	'&id=' . $rule_id .	'&rule_type=' . $rule_type) . '" title="' . __esc('Delete') . '"></a></td>
+				<a class="pid deleteMarker fa fa-remove" href="' . htmlspecialchars($module . '?action=item_remove&item_id=' . $item['id'] . '&id=' . $rule_id . '&rule_type=' . $rule_type) . '" title="' . __esc('Delete') . '"></a></td>
 			</tr>';
 
 			print $form_data;
@@ -1016,53 +1050,53 @@ function neighbor_display_vrf_match_rule_items($title, $rule_id, $rule_type, $mo
 }
 
 function neighbor_display_vrf_rule_items($title, $rule_id, $rule_type, $module) {
-	
 	global $automation_op_array, $automation_oper, $automation_tree_header_types;
-	$items = db_fetch_assoc_prepared('SELECT * FROM plugin_neighbor_vrf_rule_items WHERE rule_id = ? ORDER BY sequence', array($rule_id));
+	$items = db_fetch_assoc_prepared('SELECT * FROM plugin_neighbor_vrf_rule_items WHERE rule_id = ? ORDER BY sequence', [$rule_id]);
 	html_start_box($title, '100%', '', '3', 'center', $module . '?action=item_edit&id=' . $rule_id . '&rule_type=' . $rule_type);
 
-	$display_text = array(
-		array('display' => __('Item'),      'align' => 'left'),
-		array('display' => __('Sequence'),  'align' => 'left'),
-		array('display' => __('Operation'), 'align' => 'left'),
-		array('display' => __('Field'),     'align' => 'left'),
-		array('display' => __('Operator'),  'align' => 'left'),
-		array('display' => __('Pattern'),   'align' => 'left'),
-		array('display' => __('Actions'),   'align' => 'right')
-	);
+	$display_text = [
+		['display' => __('Item'),      'align' => 'left'],
+		['display' => __('Sequence'),  'align' => 'left'],
+		['display' => __('Operation'), 'align' => 'left'],
+		['display' => __('Field'),     'align' => 'left'],
+		['display' => __('Operator'),  'align' => 'left'],
+		['display' => __('Pattern'),   'align' => 'left'],
+		['display' => __('Actions'),   'align' => 'right']
+	];
 
 	html_header($display_text, 2);
 
 	$i = 0;
+
 	if (count((array) $items)) {
 		foreach ($items as $item) {
 			$operation = ($item['operation'] != 0) ? $automation_oper[$item['operation']] : '&nbsp;';
 
 			form_alternate_row();
-			$form_data = '<td><a class="linkEditMain" href="' . htmlspecialchars($module . '?action=item_edit&id=' . $rule_id. '&item_id=' . $item['id'] . '&rule_type=' . $rule_type) . '">Item#' . ($i+1) . '</a></td>';
-			$form_data .= '<td>' . 	$item['sequence'] . '</td>';
-			$form_data .= '<td>' . 	$operation . '</td>';
-			$form_data .= '<td>' . 	$item['field'] . '</td>';
-			$form_data .= '<td>' . 	(($item['operator'] > 0 || $item['operator'] == '') ? $automation_op_array['display'][$item['operator']] : '') . '</td>';
-			$form_data .= '<td>' . 	$item['pattern'] . '</td>';
+			$form_data = '<td><a class="linkEditMain" href="' . htmlspecialchars($module . '?action=item_edit&id=' . $rule_id . '&item_id=' . $item['id'] . '&rule_type=' . $rule_type) . '">Item#' . ($i + 1) . '</a></td>';
+			$form_data .= '<td>' . $item['sequence'] . '</td>';
+			$form_data .= '<td>' . $operation . '</td>';
+			$form_data .= '<td>' . $item['field'] . '</td>';
+			$form_data .= '<td>' . (($item['operator'] > 0 || $item['operator'] == '') ? $automation_op_array['display'][$item['operator']] : '') . '</td>';
+			$form_data .= '<td>' . $item['pattern'] . '</td>';
 
 			$form_data .= '<td class="right nowrap">';
 
-			if ($i != count((array) $items)-1) {
-				$form_data .= '<a class="pic fa fa-awwow-down moveArrow" href="' . htmlspecialchars($module . '?action=item_movedown&item_id=' . $item['id'] . '&id=' . $rule_id .	'&rule_type=' . $rule_type) . '" title="' . __esc('Move Down') . '"></a>';
+			if ($i != count((array) $items) - 1) {
+				$form_data .= '<a class="pic fa fa-awwow-down moveArrow" href="' . htmlspecialchars($module . '?action=item_movedown&item_id=' . $item['id'] . '&id=' . $rule_id . '&rule_type=' . $rule_type) . '" title="' . __esc('Move Down') . '"></a>';
 			} else {
 				$form_data .= '<span class="moveArrowNone"></span>';
 			}
 
 			if ($i > 0) {
-				$form_data .= '<a class="pic fa fa-caret-up moveArrow" href="' . htmlspecialchars($module . '?action=item_moveup&item_id=' . $item['id'] .	'&id=' . $rule_id .	'&rule_type=' . $rule_type) . '" title="' . __esc('Move Up') . '"></a>';
+				$form_data .= '<a class="pic fa fa-caret-up moveArrow" href="' . htmlspecialchars($module . '?action=item_moveup&item_id=' . $item['id'] . '&id=' . $rule_id . '&rule_type=' . $rule_type) . '" title="' . __esc('Move Up') . '"></a>';
 			} else {
 				$form_data .= '<span class="moveArrowNone"></span>';
 			}
 			$form_data .= '</td>';
 
 			$form_data .= '<td class="right nowrap">
-				<a class="pic deleteMarker fa fa-remove" href="' . htmlspecialchars($module . '?action=item_remove&item_id=' . $item['id'] .	'&id=' . $rule_id .	'&rule_type=' . $rule_type) . '" title="' . __esc('Delete') . '"></a></td>
+				<a class="pic deleteMarker fa fa-remove" href="' . htmlspecialchars($module . '?action=item_remove&item_id=' . $item['id'] . '&id=' . $rule_id . '&rule_type=' . $rule_type) . '" title="' . __esc('Delete') . '"></a></td>
 			</tr>';
 
 			print $form_data;
@@ -1073,7 +1107,6 @@ function neighbor_display_vrf_rule_items($title, $rule_id, $rule_type, $module) 
 	}
 
 	html_end_box(true);
-
 }
 
 function neighbor_global_vrf_item_edit($rule_id, $rule_item_id, $rule_type) {
@@ -1082,99 +1115,102 @@ function neighbor_global_vrf_item_edit($rule_id, $rule_item_id, $rule_type) {
 	global $automation_op_array;
 
 	switch ($rule_type) {
-	case AUTOMATION_RULE_TYPE_GRAPH_MATCH:
-		$title = __('Device Match Rule');
-		$item_table = 'plugin_neighbor_vrf_match_rule_items';
-		$sql_and = ' AND rule_type=' . $rule_type;
-		$tables = array ('host', 'host_templates');
-		$neighbor_rule = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_vrf_rules WHERE id = ?', array($rule_id));
+		case AUTOMATION_RULE_TYPE_GRAPH_MATCH:
+			$title         = __('Device Match Rule');
+			$item_table    = 'plugin_neighbor_vrf_match_rule_items';
+			$sql_and       = ' AND rule_type=' . $rule_type;
+			$tables        =  ['host', 'host_templates'];
+			$neighbor_rule = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_vrf_rules WHERE id = ?', [$rule_id]);
 
-		$_fields_rule_item_edit = $fields_neighbor_match_rule_item_edit;
-		$query_fields  = get_query_fields('host_template', array('id', 'hash'));
-		$query_fields += get_query_fields('host', array('id', 'host_template_id'));
+			$_fields_rule_item_edit = $fields_neighbor_match_rule_item_edit;
+			$query_fields           = get_query_fields('host_template', ['id', 'hash']);
+			$query_fields += get_query_fields('host', ['id', 'host_template_id']);
 
-		$_fields_rule_item_edit['field']['array'] = $query_fields;
-		$module = 'neighbor_vrf_rules.php';
+			$_fields_rule_item_edit['field']['array'] = $query_fields;
+			$module                                   = 'neighbor_vrf_rules.php';
 
-		break;
-	case AUTOMATION_RULE_TYPE_GRAPH_ACTION:
-		$title      = __('Create Graph Rule');
-		$tables     = array(AUTOMATION_RULE_TABLE_XML);
-		$item_table = 'plugin_neighbor_vrf_rule_items';
-		$sql_and    = '';
+			break;
+		case AUTOMATION_RULE_TYPE_GRAPH_ACTION:
+			$title      = __('Create Graph Rule');
+			$tables     = [AUTOMATION_RULE_TABLE_XML];
+			$item_table = 'plugin_neighbor_vrf_rule_items';
+			$sql_and    = '';
 
-		$neighbor_rule = db_fetch_row_prepared('SELECT *
+			$neighbor_rule = db_fetch_row_prepared('SELECT *
 			FROM plugin_neighbor_vrf_rules
 			WHERE id = ?',
-			array($rule_id));
-		
-		//pre_print_r($neighbor_rule,"MooOink:");
-		
-		$cols = db_get_table_column_types("plugin_neighbor_ipv4_cache");
-		//pre_print_r($cols,"Cols:");
-		$_fields_rule_item_edit = $fields_neighbor_graph_rule_item_edit;
-		foreach ($cols as $col => $rec) {
-			if (preg_match("/^id$|_id|_hash|last_seen|_changed|_num|hostname/",$col)) { continue;}
-			$fields[$col] = $col;
-		}
-		//pre_print_r($fields,"Fields:");
-		$_fields_rule_item_edit['field']['array'] = $fields;
-		$module = 'neighbor_vrf_rules.php';
+				[$rule_id]);
 
-		break;
-	case AUTOMATION_RULE_TYPE_TREE_MATCH:
-		$item_table = 'plugin_neighbor_match_rule_items';
-		$sql_and = ' AND rule_type=' . $rule_type;
-		$neighbor_rule = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_tree_rules WHERE id = ?', array($rule_id));
-		$_fields_rule_item_edit = $fields_neighbor_match_rule_item_edit;
-		$query_fields  = get_query_fields('host_template', array('id', 'hash'));
-		$query_fields += get_query_fields('host', array('id', 'host_template_id'));
+			// pre_print_r($neighbor_rule,"MooOink:");
 
-		if ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_HOST) {
-			$title = __('Device Match Rule');
-			$tables = array ('host', 'host_templates');
-			#print '<pre>'; print_r($query_fields); print '</pre>';
-		} elseif ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_GRAPH) {
-			$title = __('Graph Match Rule');
-			$tables = array ('host', 'host_templates');
-			# add some more filter columns for a GRAPH match
-			$query_fields += get_query_fields('graph_templates', array('id', 'hash'));
-			$query_fields += array('gtg.title' => 'GTG: title - varchar(255)');
-			$query_fields += array('gtg.title_cache' => 'GTG: title_cache - varchar(255)');
-			#print '<pre>'; print_r($query_fields); print '</pre>';
-		}
-		$_fields_rule_item_edit['field']['array'] = $query_fields;
-		$module = 'neighbor_tree_rules.php';
+			$cols = db_get_table_column_types('plugin_neighbor_ipv4_cache');
+			// pre_print_r($cols,"Cols:");
+			$_fields_rule_item_edit = $fields_neighbor_graph_rule_item_edit;
 
-		break;
-	case AUTOMATION_RULE_TYPE_TREE_ACTION:
-		$item_table = 'plugin_neighbor_tree_rule_items';
-		$sql_and = '';
-		$neighbor_rule = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_tree_rules WHERE id = ?', array($rule_id));
+			foreach ($cols as $col => $rec) {
+				if (preg_match('/^id$|_id|_hash|last_seen|_changed|_num|hostname/',$col)) {
+					continue;
+				}
+				$fields[$col] = $col;
+			}
+			// pre_print_r($fields,"Fields:");
+			$_fields_rule_item_edit['field']['array'] = $fields;
+			$module                                   = 'neighbor_vrf_rules.php';
 
-		$_fields_rule_item_edit = $fields_neighbor_tree_rule_item_edit;
-		$query_fields  = get_query_fields('host_template', array('id', 'hash'));
-		$query_fields += get_query_fields('host', array('id', 'host_template_id'));
+			break;
+		case AUTOMATION_RULE_TYPE_TREE_MATCH:
+			$item_table             = 'plugin_neighbor_match_rule_items';
+			$sql_and                = ' AND rule_type=' . $rule_type;
+			$neighbor_rule          = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_tree_rules WHERE id = ?', [$rule_id]);
+			$_fields_rule_item_edit = $fields_neighbor_match_rule_item_edit;
+			$query_fields           = get_query_fields('host_template', ['id', 'hash']);
+			$query_fields += get_query_fields('host', ['id', 'host_template_id']);
 
-		/* list of allowed header types depends on rule leaf_type
-		 * e.g. for a Device Rule, only Device-related header types make sense
-		 */
-		if ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_HOST) {
-			$title = __('Create Tree Rule (Device)');
-			$tables = array ('host', 'host_templates');
-			#print '<pre>'; print_r($query_fields); print '</pre>';
-		} elseif ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_GRAPH) {
-			$title = __('Create Tree Rule (Graph)');
-			$tables = array ('host', 'host_templates');
-			# add some more filter columns for a GRAPH match
-			$query_fields += get_query_fields('graph_templates', array('id', 'hash'));
-			$query_fields += array('gtg.title' => 'GTG: title - varchar(255)');
-			$query_fields += array('gtg.title_cache' => 'GTG: title_cache - varchar(255)');
-		}
-		$_fields_rule_item_edit['field']['array'] = $query_fields;
-		$module = 'neighbor_tree_rules.php';
+			if ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_HOST) {
+				$title  = __('Device Match Rule');
+				$tables =  ['host', 'host_templates'];
+				// print '<pre>'; print_r($query_fields); print '</pre>';
+			} elseif ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_GRAPH) {
+				$title  = __('Graph Match Rule');
+				$tables =  ['host', 'host_templates'];
+				// add some more filter columns for a GRAPH match
+				$query_fields += get_query_fields('graph_templates', ['id', 'hash']);
+				$query_fields += ['gtg.title' => 'GTG: title - varchar(255)'];
+				$query_fields += ['gtg.title_cache' => 'GTG: title_cache - varchar(255)'];
+				// print '<pre>'; print_r($query_fields); print '</pre>';
+			}
+			$_fields_rule_item_edit['field']['array'] = $query_fields;
+			$module                                   = 'neighbor_tree_rules.php';
 
-		break;
+			break;
+		case AUTOMATION_RULE_TYPE_TREE_ACTION:
+			$item_table    = 'plugin_neighbor_tree_rule_items';
+			$sql_and       = '';
+			$neighbor_rule = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_tree_rules WHERE id = ?', [$rule_id]);
+
+			$_fields_rule_item_edit = $fields_neighbor_tree_rule_item_edit;
+			$query_fields           = get_query_fields('host_template', ['id', 'hash']);
+			$query_fields += get_query_fields('host', ['id', 'host_template_id']);
+
+			/* list of allowed header types depends on rule leaf_type
+			 * e.g. for a Device Rule, only Device-related header types make sense
+			 */
+			if ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_HOST) {
+				$title  = __('Create Tree Rule (Device)');
+				$tables =  ['host', 'host_templates'];
+				// print '<pre>'; print_r($query_fields); print '</pre>';
+			} elseif ($neighbor_rule['leaf_type'] == TREE_ITEM_TYPE_GRAPH) {
+				$title  = __('Create Tree Rule (Graph)');
+				$tables =  ['host', 'host_templates'];
+				// add some more filter columns for a GRAPH match
+				$query_fields += get_query_fields('graph_templates', ['id', 'hash']);
+				$query_fields += ['gtg.title' => 'GTG: title - varchar(255)'];
+				$query_fields += ['gtg.title_cache' => 'GTG: title_cache - varchar(255)'];
+			}
+			$_fields_rule_item_edit['field']['array'] = $query_fields;
+			$module                                   = 'neighbor_tree_rules.php';
+
+			break;
 	}
 
 	if (!empty($rule_item_id)) {
@@ -1185,8 +1221,8 @@ function neighbor_global_vrf_item_edit($rule_id, $rule_item_id, $rule_type) {
 
 		$header_label = __('Rule Item [edit rule item for %s: %s]', $title, $neighbor_rule['name']);
 	} else {
-		$header_label = __('Rule Item [new rule item for %s: %s]', $title, $neighbor_rule['name']);
-		$neighbor_item = array();
+		$header_label              = __('Rule Item [new rule item for %s: %s]', $title, $neighbor_rule['name']);
+		$neighbor_item             = [];
 		$neighbor_item['sequence'] = get_sequence('', 'sequence', $item_table, 'rule_id=' . $rule_id . $sql_and);
 	}
 
@@ -1195,76 +1231,75 @@ function neighbor_global_vrf_item_edit($rule_id, $rule_item_id, $rule_type) {
 	html_start_box($header_label, '100%', true, '3', 'center', '');
 
 	draw_edit_form(
-		array(
-			'config' => array('no_form_tag' => true),
-			'fields' => inject_form_variables($_fields_rule_item_edit, (isset($neighbor_item) ? $neighbor_item : array()), (isset($neighbor_rule) ? $neighbor_rule : array()))
-		)
+		[
+			'config' => ['no_form_tag' => true],
+			'fields' => inject_form_variables($_fields_rule_item_edit, (isset($neighbor_item) ? $neighbor_item : []), (isset($neighbor_rule) ? $neighbor_rule : []))
+		]
 	);
 
 	html_end_box(true, true);
 }
 
 function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
-	
 	global $device_actions, $item_rows;
 
 	if (isset_request_var('cleard')) {
 		set_request_var('clear', 'true');
 	}
 
-	/* ================= input validation and session storage ================= */
-	$filters = array(
-		'rowsd' => array(
-			'filter' => FILTER_VALIDATE_INT,
+	// ================= input validation and session storage =================
+	$filters = [
+		'rowsd' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => '-1'
-			),
-		'paged' => array(
-			'filter' => FILTER_VALIDATE_INT,
+			],
+		'paged' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'default' => '1'
-			),
-		'host_status' => array(
-			'filter' => FILTER_VALIDATE_INT,
+			],
+		'host_status' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => '-1'
-			),
-		'host_template_id' => array(
-			'filter' => FILTER_VALIDATE_INT,
+			],
+		'host_template_id' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => '-1'
-			),
-		'filterd' => array(
-			'filter' => FILTER_CALLBACK,
+			],
+		'filterd' => [
+			'filter'  => FILTER_CALLBACK,
 			'pageset' => true,
 			'default' => '',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'sort_column' => array(
-			'filter' => FILTER_CALLBACK,
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'sort_column' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'description',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'sort_direction' => array(
-			'filter' => FILTER_CALLBACK,
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'sort_direction' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'ASC',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'has_graphs' => array(
-			'filter' => FILTER_VALIDATE_REGEXP,
-			'options' => array('options' => array('regexp' => '(true|false)')),
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'has_graphs' => [
+			'filter'  => FILTER_VALIDATE_REGEXP,
+			'options' => ['options' => ['regexp' => '(true|false)']],
 			'pageset' => true,
 			'default' => 'true'
-			)
-	);
+			]
+	];
 
 	validate_store_request_vars($filters, 'sess_auto');
-	/* ================= input validation ================= */
+	// ================= input validation =================
 
 	if (isset_request_var('cleard')) {
 		unset_request_var('clear');
 	}
 
-	/* if the number of rows is -1, set it to the default */
+	// if the number of rows is -1, set it to the default
 	if (get_request_var('rowsd') == -1) {
 		$rows = read_config_option('num_rows_table');
 	} else {
@@ -1280,7 +1315,7 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 	?>
 	<script type='text/javascript'>
 	function applyDeviceFilter() {
-		strURL  = '<?php print $url;?>' + '&host_status=' + $('#host_status').val();
+		strURL  = '<?php print $url; ?>' + '&host_status=' + $('#host_status').val();
 		strURL += '&host_template_id=' + $('#host_template_id').val();
 		strURL += '&rowsd=' + $('#rowsd').val();
 		strURL += '&filterd=' + $('#filterd').val();
@@ -1289,7 +1324,7 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 	}
 
 	function clearDeviceFilter() {
-		strURL = '<?php print $url;?>' + '&cleard=true&header=false';
+		strURL = '<?php print $url; ?>' + '&cleard=true&header=false';
 		loadPageNoHeader(strURL);
 	}
 
@@ -1317,67 +1352,75 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 	?>
 	<tr class='even'>
 		<td>
-			<form method='post' id='form_neighbor_host' action='<?php print htmlspecialchars($url);?>'>
+			<form method='post' id='form_neighbor_host' action='<?php print htmlspecialchars($url); ?>'>
 				<table class='filterTable'>
 					<tr>
 						<td>
-							<?php print __('Search');?>
+							<?php print __('Search'); ?>
 						</td>
 						<td>
-							<input type='text' id='filterd' size='25' value='<?php print html_escape_request_var('filterd');?>'>
+							<input type='text' id='filterd' size='25' value='<?php print html_escape_request_var('filterd'); ?>'>
 						</td>
 						<td>
-							<?php print __('Type');?>
+							<?php print __('Type'); ?>
 						</td>
 						<td>
 							<select id='host_template_id' onChange='applyDeviceFilter()'>
-								<option value='-1'<?php if (get_request_var('host_template_id') == '-1') {?> selected<?php }?>><?php print __('Any');?></option>
-								<option value='0'<?php if (get_request_var('host_template_id') == '0') {?> selected<?php }?>><?php print __('None');?></option>
+								<option value='-1'<?php if (get_request_var('host_template_id') == '-1') {?> selected<?php }?>><?php print __('Any'); ?></option>
+								<option value='0'<?php if (get_request_var('host_template_id') == '0') {?> selected<?php }?>><?php print __('None'); ?></option>
 								<?php
 								$host_templates = db_fetch_assoc('SELECT id,name FROM host_template ORDER BY name');
 
-								if (sizeof($host_templates)) {
-									foreach ($host_templates as $host_template) {
-										print "<option value='" . $host_template['id'] . "'"; if (get_request_var('host_template_id') == $host_template['id']) { print ' selected'; } print '>' . $host_template['name'] . "</option>\n";
-									}
-								}
-								?>
+	if (sizeof($host_templates)) {
+		foreach ($host_templates as $host_template) {
+			print "<option value='" . $host_template['id'] . "'";
+
+			if (get_request_var('host_template_id') == $host_template['id']) {
+				print ' selected';
+			} print '>' . $host_template['name'] . "</option>\n";
+		}
+	}
+	?>
 							</select>
 						</td>
 						<td>
-							<?php print __('Status');?>
+							<?php print __('Status'); ?>
 						</td>
 						<td>
 							<select id='host_status' onChange='applyDeviceFilter()'>
-								<option value='-1'<?php if (get_request_var('host_status') == '-1') {?> selected<?php }?>><?php print __('Any');?></option>
-								<option value='-3'<?php if (get_request_var('host_status') == '-3') {?> selected<?php }?>><?php print __('Enabled');?></option>
-								<option value='-2'<?php if (get_request_var('host_status') == '-2') {?> selected<?php }?>><?php print __('Disabled');?></option>
-								<option value='-4'<?php if (get_request_var('host_status') == '-4') {?> selected<?php }?>><?php print __('Not Up');?></option>
-								<option value='3'<?php if (get_request_var('host_status') == '3') {?> selected<?php }?>><?php print __('Up');?></option>
-								<option value='1'<?php if (get_request_var('host_status') == '1') {?> selected<?php }?>><?php print __('Down');?></option>
-								<option value='2'<?php if (get_request_var('host_status') == '2') {?> selected<?php }?>><?php print __('Recovering');?></option>
-								<option value='0'<?php if (get_request_var('host_status') == '0') {?> selected<?php }?>><?php print __('Unknown');?></option>
+								<option value='-1'<?php if (get_request_var('host_status') == '-1') {?> selected<?php }?>><?php print __('Any'); ?></option>
+								<option value='-3'<?php if (get_request_var('host_status') == '-3') {?> selected<?php }?>><?php print __('Enabled'); ?></option>
+								<option value='-2'<?php if (get_request_var('host_status') == '-2') {?> selected<?php }?>><?php print __('Disabled'); ?></option>
+								<option value='-4'<?php if (get_request_var('host_status') == '-4') {?> selected<?php }?>><?php print __('Not Up'); ?></option>
+								<option value='3'<?php if (get_request_var('host_status') == '3') {?> selected<?php }?>><?php print __('Up'); ?></option>
+								<option value='1'<?php if (get_request_var('host_status') == '1') {?> selected<?php }?>><?php print __('Down'); ?></option>
+								<option value='2'<?php if (get_request_var('host_status') == '2') {?> selected<?php }?>><?php print __('Recovering'); ?></option>
+								<option value='0'<?php if (get_request_var('host_status') == '0') {?> selected<?php }?>><?php print __('Unknown'); ?></option>
 							</select>
 						</td>
 						<td>
-							<?php print __('Devices');?>
+							<?php print __('Devices'); ?>
 						</td>
 						<td>
 							<select id='rowsd' onChange='applyDeviceFilter()'>
-								<option value='-1'<?php if (get_request_var('rowsd') == '-1') {?> selected<?php }?>><?php print __('Default');?></option>
+								<option value='-1'<?php if (get_request_var('rowsd') == '-1') {?> selected<?php }?>><?php print __('Default'); ?></option>
 								<?php
-								if (sizeof($item_rows)) {
-									foreach ($item_rows as $key => $value) {
-										print "<option value='". $key . "'"; if (get_request_var('rowsd') == $key) { print ' selected'; } print '>' . $value . '</option>\n';
-									}
-								}
-								?>
+	if (sizeof($item_rows)) {
+		foreach ($item_rows as $key => $value) {
+			print "<option value='" . $key . "'";
+
+			if (get_request_var('rowsd') == $key) {
+				print ' selected';
+			} print '>' . $value . '</option>\n';
+		}
+	}
+	?>
 							</select>
 						</td>
 						<td>
 							<span>
-								<input id='refresh' type='button' value='<?php print __esc('Go');?>'>
-								<input id='clear' type='button' value='<?php print __esc('Clear');?>'>
+								<input id='refresh' type='button' value='<?php print __esc('Go'); ?>'>
+								<input id='clear' type='button' value='<?php print __esc('Clear'); ?>'>
 							</span>
 						</td>
 					</tr>
@@ -1389,7 +1432,7 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 
 	html_end_box();
 
-	/* form the 'where' clause for our main sql query */
+	// form the 'where' clause for our main sql query
 	if (get_request_var('filterd') != '') {
 		$sql_where = "WHERE (h.hostname LIKE '%" . get_request_var('filterd') . "%' OR h.description LIKE '%" . get_request_var('filterd') . "%' OR ht.name LIKE '%" . get_request_var('filterd') . "%')";
 	} else {
@@ -1397,19 +1440,19 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 	}
 
 	if (get_request_var('host_status') == '-1') {
-		/* Show all items */
+		// Show all items
 	} elseif (get_request_var('host_status') == '-2') {
 		$sql_where .= ($sql_where != '' ? " AND h.disabled='on'" : "WHERE h.disabled='on'");
 	} elseif (get_request_var('host_status') == '-3') {
 		$sql_where .= ($sql_where != '' ? " AND h.disabled=''" : "WHERE h.disabled=''");
 	} elseif (get_request_var('host_status') == '-4') {
 		$sql_where .= ($sql_where != '' ? " AND (h.status!='3' or h.disabled='on')" : "WHERE (h.status!='3' or h.disabled='on')");
-	}else {
-		$sql_where .= ($sql_where != '' ? ' AND (h.status=' . get_request_var('host_status') . " AND h.disabled = '')" : "WHERE (h.status=" . get_request_var('host_status') . " AND h.disabled = '')");
+	} else {
+		$sql_where .= ($sql_where != '' ? ' AND (h.status=' . get_request_var('host_status') . " AND h.disabled = '')" : 'WHERE (h.status=' . get_request_var('host_status') . " AND h.disabled = '')");
 	}
 
 	if (get_request_var('host_template_id') == '-1') {
-		/* Show all items */
+		// Show all items
 	} elseif (get_request_var('host_template_id') == '0') {
 		$sql_where .= ($sql_where != '' ? ' AND h.host_template_id=0' : 'WHERE h.host_template_id=0');
 	} elseif (!isempty_request_var('host_template_id')) {
@@ -1419,7 +1462,7 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 	$host_graphs       = array_rekey(db_fetch_assoc('SELECT host_id, count(*) as graphs FROM graph_local GROUP BY host_id'), 'host_id', 'graphs');
 	$host_data_sources = array_rekey(db_fetch_assoc('SELECT host_id, count(*) as data_sources FROM data_local GROUP BY host_id'), 'host_id', 'data_sources');
 
-	/* build magic query, for matching hosts JOIN tables host and host_template */
+	// build magic query, for matching hosts JOIN tables host and host_template
 	$sql_query = 'SELECT h.id AS host_id, h.hostname, h.description, h.disabled,
 		h.status, ht.name AS host_template_name
 		FROM host AS h
@@ -1428,25 +1471,26 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 
 	$hosts = db_fetch_assoc($sql_query);
 
-	/* get the WHERE clause for matching hosts */
+	// get the WHERE clause for matching hosts
 	if ($sql_where != '') {
 		$sql_filter = ' AND (' . neighbor_build_vrf_matching_objects_filter($rule['id'], $rule_type) . ')';
 	} else {
-		$sql_filter = ' WHERE (' . neighbor_build_vrf_matching_objects_filter($rule['id'], $rule_type) .')';
+		$sql_filter = ' WHERE (' . neighbor_build_vrf_matching_objects_filter($rule['id'], $rule_type) . ')';
 	}
 
-	/* now we build up a new query for counting the rows */
+	// now we build up a new query for counting the rows
 	$rows_query = $sql_query . $sql_where . $sql_filter;
 	$total_rows = count((array) db_fetch_assoc($rows_query, false));
 
 	$sortby = get_request_var('sort_column');
-	if ($sortby=='hostname') {
+
+	if ($sortby == 'hostname') {
 		$sortby = 'INET_ATON(hostname)';
 	}
 
 	$sql_query = $rows_query .
 		' ORDER BY ' . $sortby . ' ' . get_request_var('sort_direction') .
-		' LIMIT ' . ($rows*(get_request_var('paged')-1)) . ',' . $rows;
+		' LIMIT ' . ($rows * (get_request_var('paged') - 1)) . ',' . $rows;
 	$hosts = db_fetch_assoc($sql_query, false);
 
 	$nav = html_nav_bar($url, MAX_DISPLAY_PAGES, get_request_var('paged'), $rows, $total_rows, 7, 'Devices', 'paged', 'main');
@@ -1455,15 +1499,15 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 
 	html_start_box('', '100%', '', '3', 'center', '');
 
-	$display_text = array(
-		'description'        => array(__('Description'), 'ASC'),
-		'hostname'           => array(__('Hostname'), 'ASC'),
-		'status'             => array(__('Status'), 'ASC'),
-		'host_template_name' => array(__('Device Template Name'), 'ASC'),
-		'id'                 => array(__('ID'), 'ASC'),
-		'nosort1'            => array(__('Graphs'), 'ASC'),
-		'nosort2'            => array(__('Data Sources'), 'ASC'),
-	);
+	$display_text = [
+		'description'        => [__('Description'), 'ASC'],
+		'hostname'           => [__('Hostname'), 'ASC'],
+		'status'             => [__('Status'), 'ASC'],
+		'host_template_name' => [__('Device Template Name'), 'ASC'],
+		'id'                 => [__('ID'), 'ASC'],
+		'nosort1'            => [__('Graphs'), 'ASC'],
+		'nosort2'            => [__('Data Sources'), 'ASC'],
+	];
 
 	html_header_sort(
 		$display_text,
@@ -1486,7 +1530,7 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 			form_end_row();
 		}
 	} else {
-		print "<tr><td colspan='8'><em>" . __('No Matching Devices') . "</em></td></tr>";
+		print "<tr><td colspan='8'><em>" . __('No Matching Devices') . '</em></td></tr>';
 	}
 
 	html_end_box(false);
@@ -1498,58 +1542,61 @@ function neighbor_display_vrf_matching_hosts($rule, $rule_type, $url) {
 	form_end();
 }
 
-
 function neighbor_display_vrf_object_matches($rule, $url) {
-	
 	global $config, $item_rows;
 	global $neighbor_vrf_object_fields;
-	
-	if (isset_request_var('oclear')) { set_request_var('clear', 'true'); }
 
-	/* ================= input validation and session storage ================= */
-	$filters = array(
-		'rows' => array(
-			'filter' => FILTER_VALIDATE_INT,
+	if (isset_request_var('oclear')) {
+		set_request_var('clear', 'true');
+	}
+
+	// ================= input validation and session storage =================
+	$filters = [
+		'rows' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => '-1'
-			),
-		'page' => array(
-			'filter' => FILTER_VALIDATE_INT,
+			],
+		'page' => [
+			'filter'  => FILTER_VALIDATE_INT,
 			'default' => '1'
-			),
-		'filter' => array(
-			'filter' => FILTER_CALLBACK,
+			],
+		'filter' => [
+			'filter'  => FILTER_CALLBACK,
 			'pageset' => true,
 			'default' => '',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'sort_column' => array(
-			'filter' => FILTER_CALLBACK,
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'sort_column' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'description',
-			'options' => array('options' => 'sanitize_search_string')
-			),
-		'sort_direction' => array(
-			'filter' => FILTER_CALLBACK,
+			'options' => ['options' => 'sanitize_search_string']
+			],
+		'sort_direction' => [
+			'filter'  => FILTER_CALLBACK,
 			'default' => 'ASC',
-			'options' => array('options' => 'sanitize_search_string')
-			)
-	);
+			'options' => ['options' => 'sanitize_search_string']
+			]
+	];
 
 	validate_store_request_vars($filters, 'sess_autog');
-	/* ================= input validation ================= */
+	// ================= input validation =================
 
 	if (isset_request_var('oclear')) {
 		unset_request_var('clear');
 	}
 
-	/* if the number of rows is -1, set it to the default */
-	if (get_request_var('rows') == -1) { $rows = read_config_option('num_rows_table'); }
-	else { $rows = get_request_var('rows'); }
+	// if the number of rows is -1, set it to the default
+	if (get_request_var('rows') == -1) {
+		$rows = read_config_option('num_rows_table');
+	} else {
+		$rows = get_request_var('rows');
+	}
 
 	?>
 		<script type='text/javascript'>
 		function applyObjectFilter() {
-			strURL  = '<?php print $url;?>';
+			strURL  = '<?php print $url; ?>';
 			strURL += '&rows=' + $('#rows').val();
 			strURL += '&filter=' + $('#filter').val();
 			strURL += '&header=false';
@@ -1557,7 +1604,7 @@ function neighbor_display_vrf_object_matches($rule, $url) {
 		}
 	
 		function clearObjectFilter() {
-			strURL = '<?php print $url;?>' + '&oclear=true&header=false';
+			strURL = '<?php print $url; ?>' + '&oclear=true&header=false';
 			loadPageNoHeader(strURL);
 		}
 	
@@ -1583,34 +1630,38 @@ function neighbor_display_vrf_object_matches($rule, $url) {
 	?>
 	<tr class='even'>
 		<td>
-			<form id='form_automation_objects' action='<?php print htmlspecialchars($url);?>'>
+			<form id='form_automation_objects' action='<?php print htmlspecialchars($url); ?>'>
 				<table class='filterTable'>
 					<tr>
 						<td>
-							<?php print __('Search');?>
+							<?php print __('Search'); ?>
 						</td>
 						<td>
-							<input type='text' id='filter' size='25' value='<?php print html_escape_request_var('filter');?>'>
+							<input type='text' id='filter' size='25' value='<?php print html_escape_request_var('filter'); ?>'>
 						</td>
 						<td>
-							<?php print __('Objects');?>
+							<?php print __('Objects'); ?>
 						</td>
 						<td>
 							<select id='rows' onChange='applyFilter()'>
-								<option value='-1'<?php if (get_request_var('rows') == '-1') {?> selected<?php }?>><?php print __('Default');?></option>
+								<option value='-1'<?php if (get_request_var('rows') == '-1') {?> selected<?php }?>><?php print __('Default'); ?></option>
 								<?php
 								if (sizeof($item_rows)) {
 									foreach ($item_rows as $key => $value) {
-										print "<option value='". $key . "'"; if (get_request_var('rows') == $key) { print ' selected'; } print '>' . $value . '</option>\n';
+										print "<option value='" . $key . "'";
+
+										if (get_request_var('rows') == $key) {
+											print ' selected';
+										} print '>' . $value . '</option>\n';
 									}
 								}
-								?>
+	?>
 							</select>
 						</td>
 						<td>
 							<span>
-								<input id='orefresh' type='button' value='<?php print __esc('Go');?>'>
-								<input id='oclear' type='button' value='<?php print __esc('Clear');?>'>
+								<input id='orefresh' type='button' value='<?php print __esc('Go'); ?>'>
+								<input id='oclear' type='button' value='<?php print __esc('Clear'); ?>'>
 							</span>
 						</td>
 					</tr>
@@ -1622,107 +1673,101 @@ function neighbor_display_vrf_object_matches($rule, $url) {
 
 	html_end_box();
 
-	/* ================= input validation ================= */
+	// ================= input validation =================
 	get_filter_request_var('id');
 	get_filter_request_var('snmp_query_id');
-	/* ==================================================== */
+	// ====================================================
 
 	$total_rows         = 0;
 	$num_input_fields   = 0;
 	$num_visible_fields = 0;
 
-	$name = isset($rule['neighbor_type']) ? $rule['neighbor_type'] : 'Neighbor';
+	$name       = isset($rule['neighbor_type']) ? $rule['neighbor_type'] : 'Neighbor';
 	$total_rows = isset($total_rows) ? $total_rows : 0;
 
-	$sort_column = get_request_var('sort_column') ? get_request_var('sort_column') : '';
+	$sort_column    = get_request_var('sort_column') ? get_request_var('sort_column') : '';
 	$sort_direction = get_request_var('sort_direction') ? get_request_var('sort_direction') : 'ASC';
-	$rule_id = isset($rule['id']) ? $rule['id'] : '';
-	
+	$rule_id        = isset($rule['id']) ? $rule['id'] : '';
+
 	html_start_box(__('Matching Objects [ %s ]', htmlspecialchars($name, ENT_QUOTES)) . display_tooltip(__('A blue font color indicates that the rule will be applied to the objects in question.  Other objects will not be subject to the rule.')), '100%', '', '3', 'center', '');
 
-		$html_dq_header     = '';
-		$sql_filter         = '';
-		$sql_having         = '';
-		$neighbor_objects = array();
+	$html_dq_header     = '';
+	$sql_filter         = '';
+	$sql_having         = '';
+	$neighbor_objects   = [];
 
-		//error_log("RULE:".print_r($rule,1));
-		$sql_order = "";
-		
-		$rule_options = isset($rule['neighbor_options']) ? $rule['neighbor_options'] : '';
-		if($rule_options && $sort_column && !($sort_column == 'type' || $sort_column == 'interface_status')) {
-			$sql_order = "ORDER by $sort_column $sort_direction";
-		}
-		elseif($rule_options && $sort_column && ($sort_column == 'type' || $sort_column == 'interface_status')) {
-			$sql_order = "ORDER by $sort_column $sort_direction";
-		}
-		
-		if ($sql_order) {
-			$sql_query = neighbor_build_vrf_data_query_sql($rule) . ' ' . $sql_order;
-		}
-		else {
-			$sql_query = neighbor_build_vrf_data_query_sql($rule);
-		}
-		
-		$start_rec = $rows*(get_request_var('page')-1);
-		$all_neighbor_objects = db_fetch_assoc($sql_query);
-		$total_rows = count((array) $all_neighbor_objects);
-		$neighbor_objects = array_slice($all_neighbor_objects,$start_rec,$rows);
-		//error_log(print_r($neighbor_objects,1));
-		//error_log("Query: $sql_query");
-		//pre_print_r($neighbor_objects,"OINK $sql_query:");
-		// Get heading text
-		
-		$nav = html_nav_bar('neighbor_vrf_rules.php?action=edit&id=' . $rule['id'], MAX_DISPLAY_PAGES, get_request_var('page'), $rows, $total_rows, 30, __('Matching Objects'), 'page', 'main');
-		print $nav;
+	// error_log("RULE:".print_r($rule,1));
+	$sql_order = '';
 
-		$display_text = array();
-		$field_names = array();
-		foreach ($neighbor_vrf_object_fields as $field => $title) {
-			$display_text[$field][0] = $title;
-			$display_text[$field][1] = "ASC";
-			$field_names[] = $field;
-		}
-		//pre_print_r($display_text,"Display:");
+	$rule_options = isset($rule['neighbor_options']) ? $rule['neighbor_options'] : '';
 
-		html_header_sort($display_text,$sort_column,$sort_direction,'',$config['url_path']."plugins/neighbor/neighbor_vrf_rules.php?action=edit&id=$rule_id");
-		//html_header($display_text);
+	if ($rule_options && $sort_column && !($sort_column == 'type' || $sort_column == 'interface_status')) {
+		$sql_order = "ORDER by $sort_column $sort_direction";
+	} elseif ($rule_options && $sort_column && ($sort_column == 'type' || $sort_column == 'interface_status')) {
+		$sql_order = "ORDER by $sort_column $sort_direction";
+	}
 
-		if (!count((array) $neighbor_objects)) {
-			print "<tr colspan='6'><td>" . __('There are no Objects that match this rule.') . "</td></tr>\n";
-		}
-		else {
-			print "<tr colspan='6'>" . $html_dq_header . "</tr>\n";
-		}
+	if ($sql_order) {
+		$sql_query = neighbor_build_vrf_data_query_sql($rule) . ' ' . $sql_order;
+	} else {
+		$sql_query = neighbor_build_vrf_data_query_sql($rule);
+	}
 
-		/* list of all entries */
-		$row_counter    = 0;
-		$column_counter = 0;
-		
-		foreach ($neighbor_objects as $row) {
-			form_alternate_row("line$row_counter", true);
-			$style = ' ';
-			foreach ($field_names as $field_name) {
-				
-				if (isset($row[$field_name])) {
-					if ($field_name == 'status') {
-						form_selectable_cell(get_colored_device_status(($row['disabled'] == 'on' ? true : false), $row['status']), 'status');
-					}
-					else {
-						print "<td><span id='text$row_counter" . '_' . $column_counter . "' $style>" . filter_value($row[$field_name], get_request_var('filter')) . "</span></td>";
-					}
+	$start_rec            = $rows * (get_request_var('page') - 1);
+	$all_neighbor_objects = db_fetch_assoc($sql_query);
+	$total_rows           = count((array) $all_neighbor_objects);
+	$neighbor_objects     = array_slice($all_neighbor_objects,$start_rec,$rows);
+	// error_log(print_r($neighbor_objects,1));
+	// error_log("Query: $sql_query");
+	// pre_print_r($neighbor_objects,"OINK $sql_query:");
+	// Get heading text
+
+	$nav = html_nav_bar('neighbor_vrf_rules.php?action=edit&id=' . $rule['id'], MAX_DISPLAY_PAGES, get_request_var('page'), $rows, $total_rows, 30, __('Matching Objects'), 'page', 'main');
+	print $nav;
+
+	$display_text = [];
+	$field_names  = [];
+
+	foreach ($neighbor_vrf_object_fields as $field => $title) {
+		$display_text[$field][0] = $title;
+		$display_text[$field][1] = 'ASC';
+		$field_names[]           = $field;
+	}
+	// pre_print_r($display_text,"Display:");
+
+	html_header_sort($display_text,$sort_column,$sort_direction,'',$config['url_path'] . "plugins/neighbor/neighbor_vrf_rules.php?action=edit&id=$rule_id");
+	// html_header($display_text);
+
+	if (!count((array) $neighbor_objects)) {
+		print "<tr colspan='6'><td>" . __('There are no Objects that match this rule.') . "</td></tr>\n";
+	} else {
+		print "<tr colspan='6'>" . $html_dq_header . "</tr>\n";
+	}
+
+	// list of all entries
+	$row_counter    = 0;
+	$column_counter = 0;
+
+	foreach ($neighbor_objects as $row) {
+		form_alternate_row("line$row_counter", true);
+		$style = ' ';
+
+		foreach ($field_names as $field_name) {
+			if (isset($row[$field_name])) {
+				if ($field_name == 'status') {
+					form_selectable_cell(get_colored_device_status(($row['disabled'] == 'on' ? true : false), $row['status']), 'status');
+				} else {
+					print "<td><span id='text$row_counter" . '_' . $column_counter . "' $style>" . filter_value($row[$field_name], get_request_var('filter')) . '</span></td>';
 				}
-				else {
-					print "<td><span id='text$row_counter" . '_' . $column_counter . "' $style></span></td>";
-				}
-				$column_counter++;
+			} else {
+				print "<td><span id='text$row_counter" . '_' . $column_counter . "' $style></span></td>";
 			}
-			print "</tr>\n";
-			$row_counter++;
+			$column_counter++;
 		}
+		print "</tr>\n";
+		$row_counter++;
+	}
 
 	print '</table>';
 	print '<br>';
 }
-
-
-

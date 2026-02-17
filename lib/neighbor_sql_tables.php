@@ -1,7 +1,5 @@
 <?php
 
-
-
 /*
  +-------------------------------------------------------------------------+
  | Copyright (C) 2004-2026 The Cacti Group                                 |
@@ -25,15 +23,13 @@
  +-------------------------------------------------------------------------+
 */
 
-
-function neighbor_setup_table () {
-
+function neighbor_setup_table() {
 	global $config, $database_default;
 	include_once($config['library_path'] . '/database.php');
 
 	// CDP and LLDP Neighbors table
-      // Table: plugin_neighbor_xdp
-    db_execute("
+	// Table: plugin_neighbor_xdp
+	db_execute("
       CREATE TABLE IF NOT EXISTS `plugin_neighbor_xdp` (
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `type` enum('cdp','lldp') NOT NULL,
@@ -81,8 +77,8 @@ function neighbor_setup_table () {
         ) AUTO_INCREMENT=45446 DEFAULT CHARSET=utf8mb4 
         ");
 
-      // Table: plugin_neighbor_processes
-    db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_processes` (
+	// Table: plugin_neighbor_processes
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_processes` (
                 `pid` int(10) unsigned NOT NULL,
                 `taskid` int(10) unsigned NOT NULL,
                 `started` timestamp NOT NULL default CURRENT_TIMESTAMP,
@@ -90,18 +86,18 @@ function neighbor_setup_table () {
                 ENGINE=MEMORY
                 COMMENT='Running collector processes';");
 
-                  // Table: plugin_neighbor_log
-            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_log` (
+	// Table: plugin_neighbor_log
+	db_execute('CREATE TABLE IF NOT EXISTS `plugin_neighbor_log` (
                                                 `id` int(11) NOT NULL AUTO_INCREMENT,
                                                 `logtime` datetime NOT NULL,
                                                 `message` mediumtext,
                                                 PRIMARY KEY (`id`),
                                                 KEY `logtime` (`logtime`)
                                           ) DEFAULT CHARSET=utf8mb4
-            ");
+            ');
 
-                  // Table: plugin_neighbor_edge
-            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_edge` (
+	// Table: plugin_neighbor_edge
+	db_execute('CREATE TABLE IF NOT EXISTS `plugin_neighbor_edge` (
                                                 `id` int(11) NOT NULL AUTO_INCREMENT,
                                                 `rule_id` int(11) NOT NULL,
                                                 `from_id` int(11) NOT NULL,
@@ -114,10 +110,10 @@ function neighbor_setup_table () {
                                                 KEY `edge_updated` (`edge_updated`),
                                                 KEY `rrd_file` (`rrd_file`)
                                           ) DEFAULT CHARSET=utf8mb4
-            ");
+            ');
 
-                  // Table: plugin_neighbor_poller_output
-            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_poller_output` (
+	// Table: plugin_neighbor_poller_output
+	db_execute('CREATE TABLE IF NOT EXISTS `plugin_neighbor_poller_output` (
                                                 `id` int(11) NOT NULL AUTO_INCREMENT,
                                                 `rrd_file` varchar(255) NOT NULL,
                                                 `timestamp` int(11) NOT NULL,
@@ -128,10 +124,10 @@ function neighbor_setup_table () {
                                                 UNIQUE KEY `rrd_time_key` (`rrd_file`,`timestamp`,`key_name`),
                                                 KEY `timestamp` (`timestamp`)
                                           ) DEFAULT CHARSET=utf8mb4
-            ");
+            ');
 
-                  // Table: plugin_neighbor_poller_delta
-            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_poller_delta` (
+	// Table: plugin_neighbor_poller_delta
+	db_execute('CREATE TABLE IF NOT EXISTS `plugin_neighbor_poller_delta` (
                                                 `id` int(11) NOT NULL AUTO_INCREMENT,
                                                 `rrd_file` varchar(255) NOT NULL,
                                                 `timestamp` int(11) NOT NULL,
@@ -142,10 +138,10 @@ function neighbor_setup_table () {
                                                 UNIQUE KEY `rrd_cycle_key` (`rrd_file`,`timestamp_cycle`,`key_name`),
                                                 KEY `timestamp` (`timestamp`)
                                           ) DEFAULT CHARSET=utf8mb4
-            ");
+            ');
 
-                  // Table: plugin_neighbor_user_map
-            db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_user_map` (
+	// Table: plugin_neighbor_user_map
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_user_map` (
                                                 `id` int(11) NOT NULL AUTO_INCREMENT,
                                                 `user_id` int(11) NOT NULL,
                                                 `rule_id` int(11) NOT NULL,
@@ -161,8 +157,8 @@ function neighbor_setup_table () {
                                           ) DEFAULT CHARSET=utf8mb4
             ");
 
-      // Table: plugin_neighbor_ipv4_cache
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_ipv4_cache` (
+	// Table: plugin_neighbor_ipv4_cache
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_ipv4_cache` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `host_id` int(11) NOT NULL,
                 `hostname` varchar(64) NOT NULL,
@@ -180,9 +176,9 @@ function neighbor_setup_table () {
                 KEY `last_seen` (`last_seen`)
               ) DEFAULT CHARSET=utf8mb4
     ");
-    
-      //Table: plugin_neighbor_ipv4
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_ipv4` (
+
+	// Table: plugin_neighbor_ipv4
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_ipv4` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `vrf` varchar(64) NOT NULL,
                 `host_id` int(11) NOT NULL,
@@ -219,9 +215,9 @@ function neighbor_setup_table () {
               ) DEFAULT CHARSET=utf8mb4
     ");
 
-    	//Table: plugin_neighbor_graph_rules
-    
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_graph_rules` (
+	// Table: plugin_neighbor_graph_rules
+
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_graph_rules` (
 		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`name` varchar(255) NOT NULL DEFAULT '',
 		`snmp_query_id` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
@@ -232,10 +228,10 @@ function neighbor_setup_table () {
 		KEY `enabled` (`enabled`)
 	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Graph Rules';
 	");
-    
-      //Table: plugin_neighbor_graph_rule_items
 
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_graph_rule_items` (
+	// Table: plugin_neighbor_graph_rule_items
+
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_graph_rule_items` (
 		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
 		`sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
@@ -247,10 +243,10 @@ function neighbor_setup_table () {
 		KEY `rule_id` (`rule_id`)
 	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Graph Rule Items';
 	");
-    
-      // Table: plugin_neighbor_match_rule_items
-	
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_match_rule_items` (
+
+	// Table: plugin_neighbor_match_rule_items
+
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_match_rule_items` (
 		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
 		`rule_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
@@ -264,10 +260,10 @@ function neighbor_setup_table () {
 		KEY `rule_type` (`rule_type`)
 	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Match Rule Items';
 	");
-	
-      // Table: plugin_neighbor_rules
-	
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_rules` (
+
+	// Table: plugin_neighbor_rules
+
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_rules` (
 		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`name` varchar(255) NOT NULL DEFAULT '',
             `description` varchar(64) DEFAULT NULL,
@@ -280,8 +276,8 @@ function neighbor_setup_table () {
 	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Neighbor Automation Rules';
 	");
 
-      // Table: plugin_neighbor_vrf_rules
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_rules` (
+	// Table: plugin_neighbor_vrf_rules
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_rules` (
             `id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
             `name` varchar(255) NOT NULL DEFAULT '',
             `description` varchar(64) DEFAULT NULL,
@@ -296,8 +292,8 @@ function neighbor_setup_table () {
             ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation VRF Rules';
       ");
 
-      // Table: plugin_neighbor_vrf_rule_items
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_rule_items` (
+	// Table: plugin_neighbor_vrf_rule_items
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_rule_items` (
             `id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
             `rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
             `sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
@@ -310,8 +306,8 @@ function neighbor_setup_table () {
             ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation VRF Rule Items';
       ");
 
-      // Table: plugin_neighbor_vrf_match_rule_items
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_match_rule_items` (
+	// Table: plugin_neighbor_vrf_match_rule_items
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_vrf_match_rule_items` (
             `id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
             `rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
             `rule_type` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
@@ -325,10 +321,10 @@ function neighbor_setup_table () {
             KEY `rule_type` (`rule_type`)
             ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation VRF Match Rule Items';
       ");
-	
-      // Table: plugin_neighbor_tree_rules
-	
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_tree_rules` (
+
+	// Table: plugin_neighbor_tree_rules
+
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_tree_rules` (
 		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`name` varchar(255) NOT NULL DEFAULT '',
 		`tree_id` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
@@ -341,10 +337,10 @@ function neighbor_setup_table () {
 		KEY `enabled` (`enabled`)
 	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Tree Rules';
 	");
-	
-      // Table: plugin_neighbor_tree_rule_items
-	
-      db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_tree_rule_items` (
+
+	// Table: plugin_neighbor_tree_rule_items
+
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_neighbor_tree_rule_items` (
 		`id` mediumint(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 		`rule_id` mediumint(8) UNSIGNED NOT NULL DEFAULT '0',
 		`sequence` smallint(3) UNSIGNED NOT NULL DEFAULT '0',
@@ -357,25 +353,25 @@ function neighbor_setup_table () {
 		KEY `rule_id` (`rule_id`)
 	      ) DEFAULT CHARSET=utf8mb4 COMMENT='Automation Tree Rule Items';
 	");
-	
+
 	/*
 	 * Do not auto-alter Cacti's core host table here.
 	 * On installs with wide host schemas this causes InnoDB row-size failures.
 	 */
 
-      if (!db_fetch_cell("SHOW COLUMNS FROM plugin_neighbor_rules LIKE 'neighbor_type'")) {
-            api_plugin_db_add_column('neighbor', 'plugin_neighbor_rules', array('name' => 'neighbor_type', 'type' => 'varchar(64)', 'NULL' => false, 'default' => 'interface', 'after' => 'description'));
-      }
+	if (!db_fetch_cell("SHOW COLUMNS FROM plugin_neighbor_rules LIKE 'neighbor_type'")) {
+		api_plugin_db_add_column('neighbor', 'plugin_neighbor_rules', ['name' => 'neighbor_type', 'type' => 'varchar(64)', 'NULL' => false, 'default' => 'interface', 'after' => 'description']);
+	}
 
-      if (!db_fetch_cell("SHOW COLUMNS FROM plugin_neighbor_rules LIKE 'neighbor_options'")) {
-            api_plugin_db_add_column('neighbor', 'plugin_neighbor_rules', array('name' => 'neighbor_options', 'type' => 'varchar(255)', 'NULL' => true, 'default' => '', 'after' => 'neighbor_type'));
-      }
+	if (!db_fetch_cell("SHOW COLUMNS FROM plugin_neighbor_rules LIKE 'neighbor_options'")) {
+		api_plugin_db_add_column('neighbor', 'plugin_neighbor_rules', ['name' => 'neighbor_options', 'type' => 'varchar(255)', 'NULL' => true, 'default' => '', 'after' => 'neighbor_type']);
+	}
 
-      // Create plugin_neighbor_host table for per-host settings
-      neighbor_setup_host_table();
+	// Create plugin_neighbor_host table for per-host settings
+	neighbor_setup_host_table();
 
-      // Migrate data from host table if needed
-      neighbor_migrate_host_settings();
+	// Migrate data from host table if needed
+	neighbor_migrate_host_settings();
 }
 
 function neighbor_setup_host_table() {
@@ -473,7 +469,7 @@ function neighbor_setup_host_table() {
 
 function neighbor_migrate_host_settings() {
 	// Check if we need to migrate data from host table to plugin_neighbor_host table
-	$old_fields = array(
+	$old_fields = [
 		'neighbor_discover_enable',
 		'neighbor_discover_cdp',
 		'neighbor_discover_lldp',
@@ -483,14 +479,14 @@ function neighbor_migrate_host_settings() {
 		'neighbor_discover_ospf',
 		'neighbor_discover_bgp',
 		'neighbor_discover_isis',
-	);
+	];
 
 	// Check if the old columns still exist in the host table
 	$has_old_columns = db_fetch_cell("SHOW COLUMNS FROM host LIKE 'neighbor_discover_enable'");
 
 	if ($has_old_columns) {
 		// Migrate data from host table to plugin_neighbor_host table
-		$hosts = db_fetch_assoc("SELECT id,
+		$hosts = db_fetch_assoc('SELECT id,
 			neighbor_discover_enable,
 			neighbor_discover_cdp,
 			neighbor_discover_lldp,
@@ -501,12 +497,12 @@ function neighbor_migrate_host_settings() {
 			neighbor_discover_bgp,
 			neighbor_discover_isis
 			FROM host
-			WHERE id > 0");
+			WHERE id > 0');
 
 		if (cacti_sizeof($hosts)) {
 			foreach ($hosts as $host) {
 				// Check if this host already exists in plugin_neighbor_host
-				$exists = db_fetch_cell_prepared('SELECT id FROM plugin_neighbor_host WHERE host_id = ?', array($host['id']));
+				$exists = db_fetch_cell_prepared('SELECT id FROM plugin_neighbor_host WHERE host_id = ?', [$host['id']]);
 
 				if (!$exists) {
 					// Insert the host settings
@@ -514,7 +510,7 @@ function neighbor_migrate_host_settings() {
 						(host_id, enabled, discover_cdp, discover_lldp, discover_ip,
 						discover_switching, discover_ifalias, discover_ospf, discover_bgp, discover_isis)
 						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-						array(
+						[
 							$host['id'],
 							$host['neighbor_discover_enable'],
 							$host['neighbor_discover_cdp'],
@@ -525,7 +521,7 @@ function neighbor_migrate_host_settings() {
 							$host['neighbor_discover_ospf'],
 							$host['neighbor_discover_bgp'],
 							$host['neighbor_discover_isis']
-						)
+						]
 					);
 				}
 			}
@@ -545,7 +541,7 @@ function add_fields_host() {
 	// New installations will use plugin_neighbor_host table instead
 	// This will only run on upgrades from older versions
 
-	$fields = array(
+	$fields = [
 		'neighbor_discover_enable',
 		'neighbor_discover_cdp',
 		'neighbor_discover_lldp',
@@ -555,19 +551,20 @@ function add_fields_host() {
 		'neighbor_discover_ospf',
 		'neighbor_discover_bgp',
 		'neighbor_discover_isis',
-	);
+	];
 
 	$last = 'disabled';
+
 	foreach ($fields as $field) {
 		// Only add if column doesn't exist
 		if (!db_fetch_cell("SHOW COLUMNS FROM host LIKE '$field'")) {
-			api_plugin_db_add_column('neighbor', 'host', array(
+			api_plugin_db_add_column('neighbor', 'host', [
 				'name'    => $field,
 				'type'    => 'char(3)',
 				'NULL'    => false,
 				'default' => 'on',
 				'after'   => $last
-			));
+			]);
 		}
 		$last = $field;
 	}
@@ -576,15 +573,15 @@ function add_fields_host() {
 /**
  * Get neighbor discovery settings for a host
  * 
- * @param int $host_id The host ID
+ * @param  int   $host_id The host ID
  * @return array Host settings or default settings if not found
  */
 function neighbor_get_host_settings($host_id) {
-	$settings = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_host WHERE host_id = ?', array($host_id));
-	
+	$settings = db_fetch_row_prepared('SELECT * FROM plugin_neighbor_host WHERE host_id = ?', [$host_id]);
+
 	if (!$settings) {
 		// Return default settings if host not found
-		$settings = array(
+		$settings = [
 			'host_id'            => $host_id,
 			'enabled'            => 'on',
 			'discover_cdp'       => 'on',
@@ -595,63 +592,65 @@ function neighbor_get_host_settings($host_id) {
 			'discover_ospf'      => 'on',
 			'discover_bgp'       => 'on',
 			'discover_isis'      => 'on',
-		);
+		];
 	}
-	
+
 	return $settings;
 }
 
 /**
  * Save neighbor discovery settings for a host
  * 
- * @param int $host_id The host ID
- * @param array $settings Array of settings to save
- * @return bool Success status
+ * @param  int   $host_id  The host ID
+ * @param  array $settings Array of settings to save
+ * @return bool  Success status
  */
 function neighbor_save_host_settings($host_id, $settings) {
-	$exists = db_fetch_cell_prepared('SELECT id FROM plugin_neighbor_host WHERE host_id = ?', array($host_id));
-	
-	$columns = array(
+	$exists = db_fetch_cell_prepared('SELECT id FROM plugin_neighbor_host WHERE host_id = ?', [$host_id]);
+
+	$columns = [
 		'enabled', 'discover_cdp', 'discover_lldp', 'discover_ip',
 		'discover_switching', 'discover_ifalias', 'discover_ospf',
 		'discover_bgp', 'discover_isis'
-	);
-	
+	];
+
 	if ($exists) {
 		// Update existing record
-		$sql_parts = array();
-		$params = array();
-		
+		$sql_parts = [];
+		$params    = [];
+
 		foreach ($columns as $column) {
 			if (isset($settings[$column])) {
 				$sql_parts[] = "$column = ?";
-				$params[] = $settings[$column];
+				$params[]    = $settings[$column];
 			}
 		}
-		
+
 		if (count($sql_parts) > 0) {
 			$params[] = $host_id;
-			$sql = 'UPDATE plugin_neighbor_host SET ' . implode(', ', $sql_parts) . ' WHERE host_id = ?';
+			$sql      = 'UPDATE plugin_neighbor_host SET ' . implode(', ', $sql_parts) . ' WHERE host_id = ?';
+
 			return db_execute_prepared($sql, $params);
 		}
 	} else {
 		// Insert new record
-		$insert_columns = array('host_id');
-		$insert_values = array('?');
-		$params = array($host_id);
-		
+		$insert_columns = ['host_id'];
+		$insert_values  = ['?'];
+		$params         = [$host_id];
+
 		foreach ($columns as $column) {
 			if (isset($settings[$column])) {
 				$insert_columns[] = $column;
-				$insert_values[] = '?';
-				$params[] = $settings[$column];
+				$insert_values[]  = '?';
+				$params[]         = $settings[$column];
 			}
 		}
-		
+
 		$sql = 'INSERT INTO plugin_neighbor_host (' . implode(', ', $insert_columns) . ') VALUES (' . implode(', ', $insert_values) . ')';
+
 		return db_execute_prepared($sql, $params);
 	}
-	
+
 	return false;
 }
 
@@ -659,21 +658,22 @@ function neighbor_save_host_settings($host_id, $settings) {
  * Check if a specific discovery type is enabled for a host
  * Provides backward compatibility with old host table columns
  * 
- * @param mixed $host Host array or host ID
- * @param string $field Field name (e.g., 'discover_cdp', 'enabled')
- * @return bool True if enabled, false otherwise
+ * @param  mixed  $host  Host array or host ID
+ * @param  string $field Field name (e.g., 'discover_cdp', 'enabled')
+ * @return bool   True if enabled, false otherwise
  */
 function neighbor_host_discovery_enabled($host, $field) {
 	// If host is an array with the old column names from host table
 	if (is_array($host)) {
 		$host_id = isset($host['id']) ? $host['id'] : 0;
-		
+
 		// Check for old-style field names (neighbor_discover_*)
 		$old_field = 'neighbor_' . $field;
+
 		if (array_key_exists($old_field, $host)) {
 			return !empty($host[$old_field]) && $host[$old_field] != 'off';
 		}
-		
+
 		// Check for new-style field names
 		if (array_key_exists($field, $host)) {
 			return !empty($host[$field]) && $host[$field] != 'off';
@@ -681,15 +681,16 @@ function neighbor_host_discovery_enabled($host, $field) {
 	} else {
 		$host_id = $host;
 	}
-	
+
 	// Fetch from new table
 	if ($host_id > 0) {
 		$settings = neighbor_get_host_settings($host_id);
+
 		if (isset($settings[$field])) {
 			return $settings[$field] == 'on';
 		}
 	}
-	
+
 	// Default to enabled if not found
 	return true;
 }
@@ -697,23 +698,23 @@ function neighbor_host_discovery_enabled($host, $field) {
 /**
  * Update last discovered timestamp for a host
  * 
- * @param int $host_id The host ID
- * @param string $status Optional status message
- * @return bool Success status
+ * @param  int    $host_id The host ID
+ * @param  string $status  Optional status message
+ * @return bool   Success status
  */
 function neighbor_update_host_discovery_status($host_id, $status = '') {
-	$exists = db_fetch_cell_prepared('SELECT id FROM plugin_neighbor_host WHERE host_id = ?', array($host_id));
-	
+	$exists = db_fetch_cell_prepared('SELECT id FROM plugin_neighbor_host WHERE host_id = ?', [$host_id]);
+
 	if ($exists) {
 		return db_execute_prepared(
 			'UPDATE plugin_neighbor_host SET last_discovered = NOW(), discovery_status = ? WHERE host_id = ?',
-			array($status, $host_id)
+			[$status, $host_id]
 		);
 	} else {
 		// Create entry with defaults if it doesn't exist
 		return db_execute_prepared(
 			'INSERT INTO plugin_neighbor_host (host_id, last_discovered, discovery_status) VALUES (?, NOW(), ?)',
-			array($host_id, $status)
+			[$host_id, $status]
 		);
 	}
 }
@@ -730,11 +731,11 @@ function neighbor_get_enabled_hosts() {
 /**
  * Remove host settings when a host is deleted
  * 
- * @param int $host_id The host ID to remove
+ * @param  int  $host_id The host ID to remove
  * @return bool Success status
  */
 function neighbor_delete_host_settings($host_id) {
-	return db_execute_prepared('DELETE FROM plugin_neighbor_host WHERE host_id = ?', array($host_id));
+	return db_execute_prepared('DELETE FROM plugin_neighbor_host WHERE host_id = ?', [$host_id]);
 }
 
 ?>
