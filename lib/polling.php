@@ -72,10 +72,10 @@ function neighbor_poller_output(&$rrd_update_array) {
 		foreach ($rec['times'] as $time => $data) {
 			foreach ($data as $key => $counter) {
 				db_execute_prepared("INSERT INTO plugin_neighbor_poller_output
-				     VALUES ('', ?, ?, ?, ?, NOW())
-				     ON DUPLICATE KEY UPDATE
-				     key_name = ?,
-				     value = ?",
+					VALUES ('', ?, ?, ?, ?, NOW())
+					ON DUPLICATE KEY UPDATE
+					key_name = ?,
+					value = ?",
 					[$rra_subst, $time, $key, $counter, $key, $counter]);
 			}
 		}
@@ -117,7 +117,7 @@ function process_poller_deltas() {
 		$timestamps = array_keys($data);
 		rsort($timestamps);
 
-		db_execute_prepared('INSERT INFO plugin_neighbor_log
+		db_execute_prepared('INSERT INTO plugin_neighbor_log
 			VALUES (?, NOW(), ?)',
 			['', 'process_poller_deltas() is running. Timestamps:' . print_r($timestamps,1)]);
 
@@ -259,16 +259,20 @@ function discoverCdpNeighbors($host) {
 
 	foreach ($cdpTable as $oid => $val) {
 		if (preg_match('/' . $oidTable['cdpCacheDeviceId'] . '\.(\d+\.\d+)/',$oid,$matches)) {
-			$index                       = isset($matches[1]) ? $matches[1] : '';
+			$index = isset($matches[1]) ? $matches[1] : '';
+
 			$cdpParsed[$index]['device'] = $val;
 		} elseif (preg_match('/' . $oidTable['cdpCacheDevicePort'] . '\.(\d+\.\d+)/',$oid,$matches)) {
-			$index                          = isset($matches[1]) ? $matches[1] : '';
+			$index = isset($matches[1]) ? $matches[1] : '';
+
 			$cdpParsed[$index]['interface'] = $val;
 		} elseif (preg_match('/' . $oidTable['cdpCacheVersion'] . '\.(\d+\.\d+)/',$oid,$matches)) {
-			$index                        = isset($matches[1]) ? $matches[1] : '';
+			$index = isset($matches[1]) ? $matches[1] : '';
+
 			$cdpParsed[$index]['version'] = $val;
 		} elseif (preg_match('/' . $oidTable['cdpCachePlatform'] . '\.(\d+\.\d+)/',$oid,$matches)) {
-			$index                         = isset($matches[1]) ? $matches[1] : '';
+			$index = isset($matches[1]) ? $matches[1] : '';
+
 			$cdpParsed[$index]['platform'] = $val;
 		} elseif (preg_match('/' . $oidTable['cdpCacheDuplex'] . '\.(\d+\.\d+)/',$oid,$matches)) {
 			$index = isset($matches[1]) ? $matches[1] : '';
@@ -282,8 +286,9 @@ function discoverCdpNeighbors($host) {
 			}
 			$cdpParsed[$index]['duplex'] = $duplex;
 		} elseif (preg_match('/' . $oidTable['cdpCacheUptime'] . '\.(\d+\.\d+)/',$oid,$matches)) {
-			$index                       = isset($matches[1]) ? $matches[1] : '';
-			$uptime                      = is_numeric($val) ? intval($val / 1000) : 0;
+			$index  = isset($matches[1]) ? $matches[1] : '';
+			$uptime = is_numeric($val) ? intval($val / 1000) : 0;
+
 			$cdpParsed[$index]['uptime'] = $uptime;
 		}
 	}
@@ -296,52 +301,51 @@ function discoverCdpNeighbors($host) {
 
 		if (!$myIntRecord) {
 			debug("Error: Couldn't own find Cacti interface record for host=$myHostId, snmp_index=$snmpId");
-
 			continue;
 		}
 
-		$myIp			       = isset($host['hostname']) ? $host['hostname'] : '';
-		$myHostname		  = isset($host['description']) ? $host['description'] : '';
-		$myIntName 		  = isset($myIntRecord['ifDescr']) ? $myIntRecord['ifDescr'] : '';
-		$myIntAlias 	  = isset($myIntRecord['ifAlias']) ? $myIntRecord['ifAlias'] : '';
-		$myIntSpeed 	  = isset($myIntRecord['ifHighSpeed']) ? $myIntRecord['ifHighSpeed'] : inferIntSpeed($myIntName);
-		$myIntStatus 	 = isset($myIntRecord['ifOperStatus']) ? $myIntRecord['ifOperStatus'] : '';
-		$myIntIp 		    = isset($myIntRecord['ifIP']) ? $myIntRecord['ifIP'] : '';
-		$myIntHwAddr 	 = isset($myIntRecord['ifHwAddr']) ? $myIntRecord['ifHwAddr'] : '';
+		$myIp        = isset($host['hostname']) ? $host['hostname'] : '';
+		$myHostname  = isset($host['description']) ? $host['description'] : '';
+		$myIntName   = isset($myIntRecord['ifDescr']) ? $myIntRecord['ifDescr'] : '';
+		$myIntAlias  = isset($myIntRecord['ifAlias']) ? $myIntRecord['ifAlias'] : '';
+		$myIntSpeed  = isset($myIntRecord['ifHighSpeed']) ? $myIntRecord['ifHighSpeed'] : inferIntSpeed($myIntName);
+		$myIntStatus = isset($myIntRecord['ifOperStatus']) ? $myIntRecord['ifOperStatus'] : '';
+		$myIntIp     = isset($myIntRecord['ifIP']) ? $myIntRecord['ifIP'] : '';
+		$myIntHwAddr = isset($myIntRecord['ifHwAddr']) ? $myIntRecord['ifHwAddr'] : '';
 
-		$neighHostname 	  = preg_replace('/\..+/','',$record['device']);				// This is a nasty way of stripping a domain
-		$neighPlatform 	  = $record['platform'];
-		$neighSoftware 	  = $record['version'];
-		$neighDuplex 	    = $record['duplex'];
-		$neighUptime 	    = $record['uptime'];
-		$neighInterface 	 = $record['interface'];
+		$neighHostname    = preg_replace('/\..+/','',$record['device']); // This is a nasty way of stripping a domain
+		$neighPlatform    = $record['platform'];
+		$neighSoftware    = $record['version'];
+		$neighDuplex      = $record['duplex'];
+		$neighUptime      = $record['uptime'];
+		$neighInterface   = $record['interface'];
 		$neighRecord      = findCactiHost($neighHostname);
 		$neighHostId      = isset($neighRecord[$neighHostname]['id']) ? $neighRecord[$neighHostname]['id'] : '';
 		$neighIntRecord   = findCactiInterface($neighHostId,$neighInterface);
 
 		if ($neighHostId && $neighIntRecord) {
-			$neighSnmpId	      = isset($neighIntRecord['snmp_index']) ? $neighIntRecord['snmp_index'] : '';
-			$neighIntName      = isset($neighIntRecord['ifDescr']) ? $neighIntRecord['ifDescr'] : '';
-			$neighIntAlias     = isset($neighIntRecord['ifAlias']) ? $neighIntRecord['ifAlias'] : '';
-			$neighIntSpeed     = isset($neighIntRecord['ifHighSpeed']) ? $neighIntRecord['ifHighSpeed'] : inferIntSpeed($neighIntName);
-			$neighIntStatus    = isset($neighIntRecord['ifOperStatus']) ? $neighIntRecord['ifOperStatus'] : '';
-			$neighIntIp        = isset($neighIntRecord['ifIP']) ? $neighIntRecord['ifIP'] : '';
-			$neighIntHwAddr    = isset($neighIntRecord['ifHwAddr']) ? $neighIntRecord['ifHwAddr'] : '';
+			$neighSnmpId    = isset($neighIntRecord['snmp_index']) ? $neighIntRecord['snmp_index'] : '';
+			$neighIntName   = isset($neighIntRecord['ifDescr']) ? $neighIntRecord['ifDescr'] : '';
+			$neighIntAlias  = isset($neighIntRecord['ifAlias']) ? $neighIntRecord['ifAlias'] : '';
+			$neighIntSpeed  = isset($neighIntRecord['ifHighSpeed']) ? $neighIntRecord['ifHighSpeed'] : inferIntSpeed($neighIntName);
+			$neighIntStatus = isset($neighIntRecord['ifOperStatus']) ? $neighIntRecord['ifOperStatus'] : '';
+			$neighIntIp     = isset($neighIntRecord['ifIP']) ? $neighIntRecord['ifIP'] : '';
+			$neighIntHwAddr = isset($neighIntRecord['ifHwAddr']) ? $neighIntRecord['ifHwAddr'] : '';
 		} else {
-			$neighSnmpId       = 0;
-			$neighIntName      = $neighInterface;
-			$neighIntAlias     = '';
-			$neighIntSpeed     = inferIntSpeed($neighInterface);
-			$neighIntStatus    = '';
-			$neighIntIp        = '';
-			$neighIntHwAddr    = '';
+			$neighSnmpId    = 0;
+			$neighIntName   = $neighInterface;
+			$neighIntAlias  = '';
+			$neighIntSpeed  = inferIntSpeed($neighInterface);
+			$neighIntStatus = '';
+			$neighIntIp     = '';
+			$neighIntHwAddr = '';
 		}
 
-		$hashArray = [	$host['id'], 'cdp', $myIp, $myHostname, $snmpId,
-					$myIntName, $myIntAlias, $myIntSpeed, $myIntStatus, $myIntIp, $myIntHwAddr,
-					$neighHostId, $neighHostname, $neighSnmpId,
-					$neighIntName, $neighIntAlias, $neighIntSpeed, $neighIntStatus, $neighIntIp, $neighIntHwAddr,
-					$neighPlatform, $neighSoftware, $neighDuplex];
+		$hashArray = [$host['id'], 'cdp', $myIp, $myHostname, $snmpId,
+			$myIntName, $myIntAlias, $myIntSpeed, $myIntStatus, $myIntIp, $myIntHwAddr,
+			$neighHostId, $neighHostname, $neighSnmpId,
+			$neighIntName, $neighIntAlias, $neighIntSpeed, $neighIntStatus, $neighIntIp, $neighIntHwAddr,
+			$neighPlatform, $neighSoftware, $neighDuplex];
 
 		$hostArray = [$myHostname, $neighHostname];
 		sort($hostArray);
@@ -349,18 +353,18 @@ function discoverCdpNeighbors($host) {
 		sort($intArray);
 		$neighArray = array_merge($hostArray,$intArray);		// Sort the values to  make them even for each neighbor pair
 
-		$recordHash = md5(serialize($hashArray));												// This should be unique to each CDP entry
-		$neighHash  = md5(serialize($neighArray));												// This should allow us to pair neighbors together
+		$recordHash = md5(serialize($hashArray));  // This should be unique to each CDP entry
+		$neighHash  = md5(serialize($neighArray)); // This should allow us to pair neighbors together
 
 		if (db_execute_prepared('REPLACE  INTO `plugin_neighbor_xdp`
-				       (`host_id`, `type`,`host_ip`, `hostname`, `snmp_id`,
-					`interface_name`, `interface_alias`, `interface_speed`, `interface_status`, `interface_ip`, `interface_hwaddr`,
-					`neighbor_host_id`, `neighbor_hostname`, `neighbor_snmp_id`,
-					`neighbor_interface_name`, `neighbor_interface_alias`, `neighbor_interface_speed`,
-					`neighbor_interface_status`, `neighbor_interface_ip`, `neighbor_interface_hwaddr`,
-					`neighbor_platform`, `neighbor_software`, `neighbor_duplex`,
-					`neighbor_last_changed`, `last_seen`,`neighbor_hash`, `record_hash`)
-				    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,DATE_SUB(NOW(),INTERVAL ? SECOND),NOW(),?,?)',
+			(`host_id`, `type`,`host_ip`, `hostname`, `snmp_id`,
+			`interface_name`, `interface_alias`, `interface_speed`, `interface_status`, `interface_ip`, `interface_hwaddr`,
+			`neighbor_host_id`, `neighbor_hostname`, `neighbor_snmp_id`,
+			`neighbor_interface_name`, `neighbor_interface_alias`, `neighbor_interface_speed`,
+			`neighbor_interface_status`, `neighbor_interface_ip`, `neighbor_interface_hwaddr`,
+			`neighbor_platform`, `neighbor_software`, `neighbor_duplex`,
+			`neighbor_last_changed`, `last_seen`,`neighbor_hash`, `record_hash`)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_SUB(NOW(), INTERVAL ? SECOND), NOW(), ?, ?)',
 			array_merge($hashArray,[$neighUptime, $neighHash, $recordHash])
 		)) {
 			$neighCount++;
@@ -400,8 +404,8 @@ function discoverLldpNeighbors($host) {
 			$snmpIndex              = isset($lldpToSnmp[$portIndex]) ? $lldpToSnmp[$portIndex] : '';
 			// debug("lldpRemPort: portIndex: $portIndex, lldpIndex: $lldpIndex, snmpIndex: $snmpIndex\n");
 			$lldpParsed["$snmpIndex.$lldpIndex"]['interface'] = $val;
-			$lldpParsed["$snmpIndex.$lldpIndex"]['duplex']    = 'unknown';				// No duplex in the MIB
-			$lldpParsed["$snmpIndex.$lldpIndex"]['uptime']    = 0;					// No timeticks in the MIB
+			$lldpParsed["$snmpIndex.$lldpIndex"]['duplex']    = 'unknown'; // No duplex in the MIB
+			$lldpParsed["$snmpIndex.$lldpIndex"]['uptime']    = 0;         // No timeticks in the MIB
 		} elseif (preg_match('/' . $oidTable['lldpRemSysName'] . '\.\d+\.(\d+\.\d+)/',$oid,$matches)) {
 			[$portIndex,$lldpIndex]                        = isset($matches[1]) ? explode('.',$matches[1]) : ['', ''];
 			$snmpIndex                                     = isset($lldpToSnmp[$portIndex]) ? $lldpToSnmp[$portIndex] : '';
@@ -410,7 +414,7 @@ function discoverLldpNeighbors($host) {
 			[$portIndex,$lldpIndex]                          = isset($matches[1]) ? explode('.',$matches[1]) : ['', ''];
 			$snmpIndex                                       = isset($lldpToSnmp[$portIndex]) ? $lldpToSnmp[$portIndex] : '';
 			$lldpParsed["$snmpIndex.$lldpIndex"]['version']  = $val;
-			$lldpParsed["$snmpIndex.$lldpIndex"]['platform'] = (is_string($val) ? strtok($val, "\n") : '');			// The first line of lldpRemSysDesc is closest to platform inc CDP
+			$lldpParsed["$snmpIndex.$lldpIndex"]['platform'] = (is_string($val) ? strtok($val, "\n") : ''); // The first line of lldpRemSysDesc is closest to platform inc CDP
 		}
 	}
 
@@ -467,30 +471,34 @@ function discoverLldpNeighbors($host) {
 			$neighIntHwAddr    = '';
 		}
 
-		$hashArray = [	$host['id'], 'lldp', $myIp, $myHostname, $snmpId,
-					$myIntName, $myIntAlias, $myIntSpeed, $myIntStatus, $myIntIp, $myIntHwAddr,
-					$neighHostId, $neighSnmpId,
-					$neighIntName, $neighIntAlias, $neighIntSpeed, $neighIntStatus, $neighIntIp, $neighIntHwAddr,
-					$neighHostname, $neighPlatform, $neighSoftware, $neighDuplex];
+		$hashArray = [$host['id'], 'lldp', $myIp, $myHostname, $snmpId,
+			$myIntName, $myIntAlias, $myIntSpeed, $myIntStatus, $myIntIp, $myIntHwAddr,
+			$neighHostId, $neighSnmpId,
+			$neighIntName, $neighIntAlias, $neighIntSpeed, $neighIntStatus, $neighIntIp, $neighIntHwAddr,
+			$neighHostname, $neighPlatform, $neighSoftware, $neighDuplex];
 
 		$hostArray = [$myHostname, $neighHostname];
+
 		sort($hostArray);
+
 		$intArray = [$myIntName, $neighIntName];
+
 		sort($intArray);
-		$neighArray = array_merge($hostArray,$intArray);		// Sort the values to  make them even for each neighbor pair
 
-		$recordHash = md5(serialize($hashArray));												// This should be unique to each CDP entry
-		$neighHash  = md5(serialize($neighArray));												// This should allow us to pair neighbors together
+		$neighArray = array_merge($hostArray,$intArray); // Sort the values to  make them even for each neighbor pair
 
-		if (db_execute_prepared('REPLACE  INTO `plugin_neighbor_xdp`
+		$recordHash = md5(serialize($hashArray));  // This should be unique to each CDP entry
+		$neighHash  = md5(serialize($neighArray)); // This should allow us to pair neighbors together
+
+		if (db_execute_prepared('REPLACE INTO `plugin_neighbor_xdp`
 			(`host_id`, `type`,`host_ip`, `hostname`, `snmp_id`,
 			`interface_name`, `interface_alias`, `interface_speed`, `interface_status`, `interface_ip`, `interface_hwaddr`,
-					`neighbor_host_id`, `neighbor_hostname`, `neighbor_snmp_id`,
-					`neighbor_interface_name`, `neighbor_interface_alias`, `neighbor_interface_speed`,
-					`neighbor_interface_status`, `neighbor_interface_ip`, `neighbor_interface_hwaddr`,
-					`neighbor_platform`, `neighbor_software`, `neighbor_duplex`,
-					`neighbor_last_changed`, `neighbor_hash`, `record_hash`)
-				    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,DATE_SUB(NOW(),INTERVAL ? SECOND),?,?)',
+			`neighbor_host_id`, `neighbor_hostname`, `neighbor_snmp_id`,
+			`neighbor_interface_name`, `neighbor_interface_alias`, `neighbor_interface_speed`,
+			`neighbor_interface_status`, `neighbor_interface_ip`, `neighbor_interface_hwaddr`,
+			`neighbor_platform`, `neighbor_software`, `neighbor_duplex`,
+			`neighbor_last_changed`, `neighbor_hash`, `record_hash`)
+		    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_SUB(NOW(), INTERVAL ? SECOND), ?, ?)',
 			array_merge($hashArray,[$neighUptime, $neighHash, $recordHash])
 		)) {
 			$neighCount++;
